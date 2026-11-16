@@ -46,6 +46,15 @@ Everything runs in the browser. No install, no account, no backend.
 
 Orange sticky notes from your lead (the guide popups) walk you through each ticket step by step.
 
+### Week 4: fundamentals and real training
+
+| Ticket | App | What you learn |
+| --- | --- | --- |
+| ROB-21 | **Academy**: Perception, planning & ROS 2 | Back-project a depth image (ray-cast from MuJoCo's camera) into a point cloud and locate a cube; the Jacobian and damped-least-squares IK tracking a moving target; RRT motion planning around obstacles; ROS 2 concepts, then two nodes written against a small `rclpy`-shaped stand-in. |
+| ROB-22 | **Academy**: Train real policies | Behaviour cloning with a real neural network trained in the browser on MuJoCo demos (success on new layouts goes roughly 0/20 → 15/20 → 20/20 with 10, 20 and 40 demos); flow matching on a two-mode action distribution; a MuJoCo quadruped whose trot gait you write and improve with random search. |
+
+Progress lives in the browser; **Tickets → Your progress** downloads or loads a progress file. Every lesson has a feedback button that posts to a Google Sheet once you set `FEEDBACK_URL` ([setup](docs/feedback-sheet.md)), or opens a pre-filled GitHub issue otherwise.
+
 ## What is real and what is pretend
 
 It matters to be honest about this in a teaching tool.
@@ -63,7 +72,7 @@ It matters to be honest about this in a teaching tool.
 
 **Pretend**
 
-- **Model training.** No neural network is trained in your browser. [`js/models.js`](js/models.js) is a small, readable formula that turns (model, the data you kept, hyper-parameters, language, pretraining, domain randomization) into a hidden skill level and behaviour quirks. The *direction* of each effect follows a cited paper; the sizes are invented.
+- **Model training in the Train app.** The Train app does not train a network (the *Train real policies* course does: a small MLP, [`js/nn.js`](js/nn.js)). [`js/models.js`](js/models.js) is a small, readable formula that turns (model, the data you kept, hyper-parameters, language, pretraining, domain randomization) into a hidden skill level and behaviour quirks. The *direction* of each effect follows a cited paper; the sizes are invented.
 - **The policies.** A "trained policy" is a scripted pick-and-place controller ([`js/sim/operator.js`](js/sim/operator.js)) acting out those quirks: mis-perceiving the cube, fumbling, stalling if it learned from idle demos, shaking if it learned from shaky ones, doing the wrong task if it can't read language. Domain-randomized policies carry objects more gently, a real physical difference that helps on heavy, slippery cubes and costs time on normal ones.
 - **World models and labelers.** A generated rollout is a MuJoCo rollout corrupted the way generated video fails (ignoring the prompt; objects that blink or teleport), with noisy pseudo-actions. The FLORA-style auto-labeler and the RL reward model are rule-based with realistic error rates.
 - **The grasp detector** is a nearest-prototype heuristic on hand shape, with prototypes written by hand for each of the 33 Feix types. It is right on clean demo poses and noisy on real hands; it cannot see object size, which separates several Feix types.
@@ -102,11 +111,15 @@ js/sim/dreams.js      generated rollouts for the World Models app
 js/sim/skills.js      the coffee shift: pick/place/press skills with real slips
 js/sim/mobile.js      the delivery robot, city map and ray-cast lidar
 js/sim/menagerie.js   loads MuJoCo Menagerie models (SO-101, LEAP Hand) into MuJoCo's file system
+js/nn.js              a tiny MLP with Adam that really trains in the browser
+js/sim/bc.js          behaviour cloning: reactive expert, demo recording, training, rollouts
+js/sim/legged.js      MuJoCo quadruped and gait runner
+js/config.js          feedback endpoint and repo URL
 js/hw/feetech.js      Feetech STS3215 protocol over Web Serial (the SO-101 servos)
 js/hand/grasp.js      hand landmarks → features → Feix-33 grasp type; LEAP Hand retargeting
 js/course/explain.js  interactive explainers shown before each lesson's code (sliders, live MuJoCo)
-js/course/lessons*.js Academy curriculum: 9 courses, 56 lessons (code, quiz or lab)  ← add lessons here
-js/apps/labs2-4.js    interactive lab benches for the newer lessons
+js/course/lessons*.js Academy curriculum: 11 courses, 64 lessons (code, quiz or lab)  ← add lessons here
+js/apps/labs2-5.js    interactive lab benches for the newer lessons
 js/apps/*.js          one file per app (Academy, Teleop, Leader Arm, Hand Cam, Dataset, World Models, Train, Eval, Capstone, Tickets)
 vendor/               MuJoCo WASM, three.js, Pyodide, MediaPipe, Menagerie models (checked in; see vendor/README.md)
 tests/                headless checks (below)
@@ -131,7 +144,8 @@ npm run test:e2e          # whole flow in headless Chrome via Playwright: every 
 ## Ideas for next steps
 
 - More robots (a bimanual setup, a mobile base) and tasks (pushing, drawers, sorting by language).
-- A genuinely trained tiny policy (behaviour cloning with a small MLP in the browser) next to the pretend zoo.
+- Use the real trained network inside the Train and Eval apps (today it lives in its Academy lesson).
+- Accounts and synced progress (GitHub sign-in with a hosted database), then honour-based certificates.
 - Use the SO-101 Menagerie model in the main Teleop, Dataset and Eval apps, not only the Leader Arm station.
 - Gamepad teleoperation; record leader-arm episodes straight into the Dataset app.
 - A laundry-folding variant of the deployment course (MuJoCo flex/cloth).

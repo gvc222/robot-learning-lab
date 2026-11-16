@@ -90,3 +90,17 @@ export function ask(text, okLabel = 'Yes') {
     m.hidden = false;
   });
 }
+
+// ── progress file: take your progress to another browser or keep a backup (no account needed) ──
+export function exportProgress(summary = {}) {
+  const data = { app: 'robot-learning-lab', version: 1, exported: new Date().toISOString(), summary, state, episodes };
+  const a = h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })), download: `robot-lab-progress-${new Date().toISOString().slice(0, 10)}.json` });
+  document.body.append(a); a.click(); a.remove();
+}
+export async function importProgress(file) {
+  const data = JSON.parse(await file.text());
+  if (data.app !== 'robot-learning-lab' || !data.state?.course) throw new Error('not a Robot Learning Lab progress file');
+  localStorage.setItem(KEY, JSON.stringify(data.state));
+  localStorage.setItem(EP_KEY, JSON.stringify(Array.isArray(data.episodes) ? data.episodes : []));
+  location.reload();
+}

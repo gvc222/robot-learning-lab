@@ -1,3 +1,4 @@
+import fs from 'fs';
 // End-to-end walk through the whole lab in headless Chrome.  Run: node tests/e2e.mjs
 import { open, server } from './shot.mjs';
 const shots = process.env.SHOTS || '/tmp';
@@ -42,7 +43,7 @@ for (const l of lessons) {
     const sol = await page.evaluate(async (id) => (await import('./js/apps/academy.js')).ORDERED.find((x) => x.id === id).solution, l.id);
     await page.evaluate((c) => lab.setCode(c), sol);
     await page.click('#run-tests');
-    await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 90000 });
+    await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 240000 });
     const fails = await page.locator('.test.fail').allTextContents();
     if (fails.length) log('   ', l.id, fails.join(' | '));
   }
@@ -239,6 +240,15 @@ check('grasp detector labels demo poses', handOk === 5, `${handOk}/5`);
 await page.click('#hc-logbtn');
 check('grasp logged', /Download log/.test(await page.textContent('#hc-log')));
 await page.screenshot({ path: `${shots}/handcam.png` });
+
+log('Progress file and feedback');
+await app('tickets');
+const [pf] = await Promise.all([page.waitForEvent('download'), page.click('#export-progress')]);
+const pj = JSON.parse(fs.readFileSync(await pf.path(), 'utf8'));
+check('progress file has state, episodes and a summary', pj.app === 'robot-learning-lab' && pj.state.course && Array.isArray(pj.episodes) && pj.summary.lessons_total > 60, JSON.stringify(pj.summary));
+await openLesson('Degrees to radians'); await page.click('#feedback-btn'); await page.fill('#fb-text', 'test note');
+check('feedback dialog opens', await page.locator('#fb-send').isVisible());
+await page.click('#modal button.ghost >> text=Cancel');
 
 const real = errors.filter((e) => !/google|favicon/.test(e));
 check('no console or page errors', real.length === 0, real.slice(0, 5).join('\n'));

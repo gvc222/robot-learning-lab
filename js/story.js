@@ -69,6 +69,13 @@ export const TICKETS = [
   { id: 'ROB-20', title: 'Plug in a real leader arm', app: 'leader', week: 3, optional: true,
     desc: 'Optional, needs an SO-101 leader and Chrome: connect it over USB, load your calibration, record an episode.',
     done: () => !!state.seen.leaderEpisode },
+  // ── Week 4: the missing fundamentals, and real training ──
+  { id: 'ROB-21', title: 'Perception, planning & ROS 2', app: 'academy', week: 4,
+    desc: 'Find a cube in a real depth image, track a target with the Jacobian, plan around obstacles with RRT, and write two ROS 2 nodes.',
+    done: () => courseDone(['core2']), progress: () => courseCount('core2') },
+  { id: 'ROB-22', title: 'Train real policies', app: 'academy', week: 4,
+    desc: 'No pretending this time: clone an expert with a neural network trained in your browser, sample two-mode actions with flow matching, and teach a quadruped to trot.',
+    done: () => courseDone(['learn']), progress: () => courseCount('learn') },
 ];
 
 export const activeTicket = () => TICKETS.find((t) => !t.optional && !t.done());
@@ -102,6 +109,8 @@ export const BRIEFINGS = {
   'ROB-17': [['Maya', 'The cafe wants a full shift, not a pick-and-place. Cups slip. Write the <b>coffee shift</b> so it recovers, and sort the logs before anyone trains on them.']],
   'ROB-18': [['Maya', 'Second pilot: sidewalk delivery. Start with wheels and Kalman filters; mapping is inside the course, no separate SLAM course needed.']],
   'ROB-19': [['Dev', 'The dexterous-hand team wants grasp labels. Open <b>Hand Cam</b>, show it a few grasps, and log 3 different types.']],
+  'ROB-21': [['Maya', 'Week 4. Time to fill the gaps a robotics interview will poke at: point clouds, Jacobians, motion planning and ROS 2.']],
+  'ROB-22': [['Maya', 'You have been using my pretend training formula for weeks. Now train the real thing: a small network, real demos, real rollouts. Watch how many demos it takes.']],
   'ROB-20': [['Dev', 'If you have an SO-101 leader at home, the <b>Leader Arm</b> station reads it straight from Chrome. Totally optional.']],
   'ROB-8': [['Maya', 'You are onboarded. We have a demo on Friday and it is yours. The brief is in <b>Capstone</b>. Different robot, two task languages, real constraints. Good luck!'],
     ['Dev', 'Ping me (the request button in Dataset) if you need operator hours. They are not free.']],

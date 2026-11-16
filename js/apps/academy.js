@@ -7,7 +7,9 @@ import { trueSubtasks } from '../annotate.js';
 import { NEW_LABS } from './labs2.js';
 import { LABS3 } from './labs3.js';
 import { LABS4 } from './labs4.js';
+import { LABS5 } from './labs5.js';
 import { EXPLAIN } from '../course/explain.js';
+import { FEEDBACK_URL, REPO_URL } from '../config.js';
 import { EditorView, basicSetup, keymap, EditorState, Compartment, indentWithTab, indentUnit, python, xml, oneDark } from '../../vendor/codemirror/cm.js';
 import { Viewer } from '../sim/viewer.js';
 
@@ -161,6 +163,7 @@ const LABS = {
   ...NEW_LABS,
   ...LABS3,
   ...LABS4,
+  ...LABS5,
 };
 
 
@@ -196,6 +199,29 @@ export default {
     const resetBtn = h('button.ghost', { onclick: async () => { if (await ask('Replace your code with the starter?', 'Reset')) { editor.value = lesson.starter; delete state.course.code[lesson.id]; save(); } } }, 'Reset');
     const solBtn = h('button.ghost', { onclick: async () => { if (await ask('Show the reference solution? Try the hint first.', 'Show it')) { editor.value = lesson.solution; state.course.code[lesson.id] = lesson.solution; save(); } } }, 'Solution');
     const codeRow = h('.row', {}, runBtn, nextBtn, hintBtn, resetBtn, solBtn);
+    // Per-lesson feedback: goes to a Google Sheet when FEEDBACK_URL is set (js/config.js), otherwise to a pre-filled GitHub issue.
+    const fbBtn = h('button.small.ghost#feedback-btn', { style: 'align-self:flex-start', onclick: () => {
+      const l = lesson; let rating = '';
+      const ta = h('textarea#fb-text', { rows: 4, style: 'width:100%', placeholder: 'What was confusing, broken or missing? What would you like next?' });
+      const chips = h('.row', { style: 'gap:6px' }, ['👍 clear', '😕 confusing', '🐛 something broke', '💡 idea'].map((t) => h('button.small.ghost', { onclick: (e) => { rating = t; chips.querySelectorAll('button').forEach((b) => b.classList.add('ghost')); e.currentTarget.classList.remove('ghost'); } }, t)));
+      const send = async () => {
+        const row = { lesson: l.id, title: l.title, course: l.course, rating, text: ta.value.trim(), passed: !!state.course.done[l.id], lessons_done: Object.values(state.course.done).filter(Boolean).length, when: new Date().toISOString(), page: location.href };
+        if (!row.rating && !row.text) { toast('Pick a reaction or write a line first.'); return; }
+        (state.feedback ||= []).push(row); save();
+        if (FEEDBACK_URL) {
+          try { await fetch(FEEDBACK_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(row) }); toast('Thanks! Feedback sent.'); }
+          catch { toast('Could not reach the feedback sheet. Saved in your progress file instead.'); }
+        } else {
+          window.open(`${REPO_URL}/issues/new?title=${encodeURIComponent(`[feedback] ${l.title}`)}&body=${encodeURIComponent(`**Lesson:** ${l.id}\n**Reaction:** ${rating || '-'}\n\n${row.text}`)}`, '_blank', 'noopener');
+          toast('Opening a pre-filled GitHub issue.');
+        }
+        $('#modal').hidden = true;
+      };
+      fill($('#modal'), h('.box', {}, h('h2', {}, `Feedback: ${l.title}`), chips, ta,
+        h('p.dim', { style: 'font-size:12px' }, FEEDBACK_URL ? 'Sent anonymously: the lesson, your reaction and text, and how many lessons you have finished. No name or email.' : 'Opens a GitHub issue you can review before posting.'),
+        h('.row', {}, h('button#fb-send', { onclick: send }, 'Send'), h('button.ghost', { onclick: () => { $('#modal').hidden = true; } }, 'Cancel'))));
+      $('#modal').hidden = false;
+    } }, '💬 Feedback on this lesson');
     const quizBox = h('#quiz.col', { style: 'gap:10px' });
     const explainBox = h('#explain'); let explainCleanup = null;
     const sidePanel = h('.side.right', { style: 'width:360px' }, h('h3', {}, 'Lab bench'), panel);
@@ -287,7 +313,7 @@ export default {
     }
 
     el.append(h('.split', {}, nav,
-      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, crumb, title, text, explainBox, quizBox, edBox, codeRow, results, term),
+      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, crumb, title, text, explainBox, quizBox, edBox, codeRow, results, term, fbBtn),
       sidePanel));
     open(lesson);
     getPy().catch(() => {}); // warm up in the background

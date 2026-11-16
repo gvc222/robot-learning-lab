@@ -1,6 +1,7 @@
 import { MORE } from './lessons2.js';
 import { MORE3, COURSES3 } from './lessons3.js';
 import { CONTROL_INTRO, CONTROL_MORE } from './lessons4.js';
+import { MORE5, COURSES5 } from './lessons5.js';
 // Academy curriculum. Each lesson: explanation, starter code, a reference solution, and tests.
 // Python lessons run in Pyodide (CPython compiled to WebAssembly); tests are plain asserts.
 // `pre` runs before the learner's code. `viz` names a visualisation in apps/academy.js.
@@ -13,6 +14,7 @@ export const COURSES = [
   { id: 'hardware', title: 'Build an SO-101', blurb: 'From a box of parts to a calibrated arm with cameras.' },
   { id: 'corl', title: 'CoRL 2026 Review Club', blurb: 'The award finalists and other landmark papers, reviewed hands-on.' },
   ...COURSES3,
+  ...COURSES5,
 ];
 const UNIT_COURSE = { 1: 'basics', 2: 'sim', 3: 'rl' };
 
@@ -201,4 +203,5 @@ def _greedy_path(Q):
   },
   ...MORE,
   ...MORE3,
+  ...MORE5,
 ];
