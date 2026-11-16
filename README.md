@@ -6,7 +6,7 @@ You don't read about robot learning here. You badge in to *Tabletop Robotics*, g
 
 Everything runs in the browser. No install, no account, no backend.
 
-> **Live site:** enable GitHub Pages for this repo (Settings → Pages → Deploy from branch → `main` / root) and it is served at `https://<user>.github.io/robot-learning-lab/`.
+> **Live site:** https://gvc222.github.io/robot-learning-lab/ (once GitHub Pages is on: Settings → Pages → Deploy from branch → `main` / root).
 
 ## What you do
 
@@ -46,7 +46,7 @@ The "night shift" teleoperators are the same scripted controller with human-look
 It is a static site. Any web server works:
 
 ```sh
-git clone https://github.com/<user>/robot-learning-lab.git
+git clone https://github.com/gvc222/robot-learning-lab.git
 cd robot-learning-lab
 python3 -m http.server 8000    # then open http://localhost:8000
 ```
