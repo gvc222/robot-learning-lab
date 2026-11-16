@@ -1,0 +1,14 @@
+{
+  "name": "robot-learning-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A hands-on, beginner-friendly introduction to robotics and robot learning, played as your first week at a robotics lab.",
+  "license": "MIT",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node tests/sim.test.mjs",
+    "test:calibration": "node tests/models.test.mjs",
+    "test:e2e": "node tests/e2e.mjs"
+  }
+}
