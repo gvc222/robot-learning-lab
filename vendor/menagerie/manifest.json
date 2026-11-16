@@ -1,0 +1,34 @@
+{
+ "leap_hand": [
+  "base.stl",
+  "distal.stl",
+  "medial.stl",
+  "palm_right.stl",
+  "proximal.stl",
+  "thumb_base.stl",
+  "thumb_distal.stl",
+  "thumb_proximal.stl",
+  "thumb_tip.stl",
+  "tip.stl"
+ ],
+ "robotstudio_so101": [
+  "base_motor_holder_so101_v1.stl",
+  "base_so101_v2.stl",
+  "motor_holder_so101_base_v1.stl",
+  "motor_holder_so101_wrist_v1.stl",
+  "moving_jaw_so101_gripper_part0_v1.stl",
+  "moving_jaw_so101_gripper_part1_v1.stl",
+  "moving_jaw_so101_gripper_v1.stl",
+  "moving_jaw_so101_v1.stl",
+  "rotation_pitch_so101_v1.stl",
+  "sts3215_03a_no_horn_v1.stl",
+  "sts3215_03a_v1.stl",
+  "under_arm_so101_v1.stl",
+  "upper_arm_so101_v1.stl",
+  "waveshare_mounting_plate_so101_v2.stl",
+  "wrist_roll_follower_so101_camera_mount.stl",
+  "wrist_roll_follower_so101_gripper_part0_v1.stl",
+  "wrist_roll_follower_so101_v1.stl",
+  "wrist_roll_pitch_so101_v2.stl"
+ ]
+}

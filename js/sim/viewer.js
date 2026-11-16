@@ -2,11 +2,24 @@
 import * as THREE from 'three';
 import { OrbitControls } from '../../vendor/three/OrbitControls.js';
 
-const G = { PLANE: 0, SPHERE: 2, CAPSULE: 3, ELLIPSOID: 4, CYLINDER: 5, BOX: 6 };
+const G = { PLANE: 0, SPHERE: 2, CAPSULE: 3, ELLIPSOID: 4, CYLINDER: 5, BOX: 6, MESH: 7 };
+
+// A MuJoCo mesh's vertices are stored in the geom's own frame, so they can be used as-is.
+const meshCache = new WeakMap();
+function meshGeometry(m, id) {
+  let byId = meshCache.get(m); if (!byId) meshCache.set(m, (byId = new Map()));
+  if (byId.has(id)) return byId.get(id);
+  const va = m.mesh_vertadr[id], vn = m.mesh_vertnum[id], fa = m.mesh_faceadr[id], fn = m.mesh_facenum[id];
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(m.mesh_vert.subarray(3 * va, 3 * (va + vn))), 3));
+  geo.setIndex(new THREE.BufferAttribute(Uint32Array.from(m.mesh_face.subarray(3 * fa, 3 * (fa + fn))), 1));
+  geo.computeVertexNormals();
+  byId.set(id, geo); return geo;
+}
 
 export class Viewer {
-  constructor(container, { cam = [0.98, -0.04, 0.66], look = [0.19, 0.0, 0.02] } = {}) {
-    this.container = container;
+  constructor(container, { cam = [0.98, -0.04, 0.66], look = [0.19, 0.0, 0.02], groups = null, show = null, minDist = 0.3, maxDist = 1.6 } = {}) {
+    this.container = container; this.groups = groups; this.show = show;
     const r = this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -18,7 +31,7 @@ export class Viewer {
     this.camera.position.set(...cam);
     this.controls = new OrbitControls(this.camera, r.domElement);
     this.controls.target.set(...look);
-    this.controls.enablePan = false; this.controls.minDistance = 0.3; this.controls.maxDistance = 1.6;
+    this.controls.enablePan = false; this.controls.minDistance = minDist; this.controls.maxDistance = maxDist;
     this.controls.maxPolarAngle = Math.PI / 2 - 0.05;
     this.controls.update();
     this.hemi = new THREE.HemisphereLight(0xffffff, 0x556070, 1.5);
@@ -53,15 +66,19 @@ export class Viewer {
         case G.CAPSULE: geo = new THREE.CapsuleGeometry(a, 2 * b, 8, 20).rotateX(Math.PI / 2); break;
         case G.CYLINDER: geo = new THREE.CylinderGeometry(a, a, 2 * b, 28).rotateX(Math.PI / 2); break;
         case G.ELLIPSOID: geo = new THREE.SphereGeometry(1, 24, 16).scale(a, b, c); break;
+        case G.MESH: geo = meshGeometry(m, m.geom_dataid[i]); break;
         default: geo = new THREE.BoxGeometry(2 * a, 2 * b, 2 * c);
       }
+      const mi = m.geom_matid[i], src = mi >= 0 ? m.mat_rgba : rgba, o = mi >= 0 ? 4 * mi : 4 * i;
       const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(rgba[4 * i], rgba[4 * i + 1], rgba[4 * i + 2]), roughness: 0.65, metalness: 0.05,
-        transparent: rgba[4 * i + 3] < 1, opacity: rgba[4 * i + 3],
+        color: new THREE.Color(src[o], src[o + 1], src[o + 2]), roughness: 0.65, metalness: 0.05,
+        transparent: src[o + 3] < 1, opacity: src[o + 3],
       });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.castShadow = type[i] !== G.PLANE; mesh.receiveShadow = true;
       mesh.matrixAutoUpdate = false;
+      // visual-only groups (e.g. Menagerie models keep collision shapes in groups 3-4)
+      if ((this.groups && !this.groups.includes(m.geom_group[i])) || (this.show && !this.show(m, i))) mesh.visible = false;
       this.group.add(mesh); this.meshes.push(mesh);
     }
     this.draw();
