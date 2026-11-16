@@ -6,11 +6,12 @@ import tickets from './apps/tickets.js';
 import academy from './apps/academy.js';
 import teleop from './apps/teleop.js';
 import dataset from './apps/dataset.js';
+import dreams from './apps/dreams.js';
 import train from './apps/train.js';
 import evalApp from './apps/eval.js';
 import brief from './apps/brief.js';
 
-const APPS = [tickets, academy, teleop, dataset, train, evalApp, brief,
+const APPS = [tickets, academy, teleop, dataset, dreams, train, evalApp, brief,
   { id: 'chat', icon: '💬', title: 'Chat', narrowOnly: true, mount(el) { const c = $('#chat'); c.classList.add('as-app'); el.append(c); return () => { c.classList.remove('as-app'); $('#shell').append(c); }; } }];
 let current = null, unmount = null;
 

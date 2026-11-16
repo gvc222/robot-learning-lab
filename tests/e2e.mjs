@@ -1,6 +1,5 @@
 // End-to-end walk through the whole lab in headless Chrome.  Run: node tests/e2e.mjs
 import { open, server } from './shot.mjs';
-import { LESSONS } from '../js/course/lessons.js';
 const shots = process.env.SHOTS || '/tmp';
 const { browser, page, errors } = await open();
 const log = (...a) => console.log(...a);
@@ -14,18 +13,42 @@ await page.evaluate(() => { lab.state.guideOff = false; });
 
 log('Academy');
 await app('academy');
-for (const l of LESSONS) {
-  await page.evaluate((title) => [...document.querySelectorAll('.lesson-nav button')].find((b) => b.textContent.includes(title)).click(), l.title);
-  if (l.id === 'fk') { // the untouched starter must fail politely, not crash
-    await page.click('#run-tests'); await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 90000 });
-    check('starter code fails with a readable message', await page.locator('.test.fail').count() > 0);
+const lessons = await page.evaluate(async () => (await import('./js/apps/academy.js')).ORDERED.map((l) => ({ id: l.id, title: l.title, kind: l.kind || (l.lang === 'xml' ? 'xml' : 'py'), quiz: l.quiz?.map((q) => q.answer) || null })));
+const openLesson = (title) => page.evaluate(async (t) => {
+  const { ORDERED } = await import('./js/apps/academy.js'); const l = ORDERED.find((x) => x.title === t);
+  lab.state.seen.openCourses[l.course] = true; lab.openApp('tickets'); lab.openApp('academy');
+  [...document.querySelectorAll('.lesson-nav button')].find((b) => b.textContent.includes(t)).click();
+}, title);
+for (const l of lessons) {
+  await openLesson(l.title);
+  if (l.kind === 'quiz') {
+    for (const [qi, a] of l.quiz.entries()) {
+      const wrong = a === 0 ? 1 : 0;
+      await page.click(`.quiz-opt[data-q="${qi}"][data-o="${wrong}"]`);
+      await page.click(`.quiz-opt[data-q="${qi}"][data-o="${a}"]`);
+    }
+  } else if (l.kind === 'lab') { // the SO-101 motor bench
+    await page.click('button:has-text("Run lerobot-find-port")'); await page.click('button:has-text("Unplug USB")');
+    await page.click('button:text-is("Press Enter")'); // nothing connected -> error
+    for (const m of ['gripper', 'wrist_roll', 'wrist_flex', 'elbow_flex', 'shoulder_lift', 'shoulder_pan']) {
+      await page.locator('label.check', { hasText: m }).locator('input').check();
+      await page.click('button:text-is("Press Enter")');
+    }
+  } else {
+    if (l.id === 'fk') { // the untouched starter must fail politely, not crash
+      await page.click('#run-tests'); await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 90000 });
+      check('starter code fails with a readable message', await page.locator('.test.fail').count() > 0);
+    }
+    const sol = await page.evaluate(async (id) => (await import('./js/apps/academy.js')).ORDERED.find((x) => x.id === id).solution, l.id);
+    await page.fill('textarea.code', sol); await page.dispatchEvent('textarea.code', 'input');
+    await page.click('#run-tests');
+    await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 90000 });
+    const fails = await page.locator('.test.fail').allTextContents();
+    if (fails.length) log('   ', l.id, fails.join(' | '));
   }
-  await page.fill('textarea.code', l.solution); await page.dispatchEvent('textarea.code', 'input');
-  await page.click('#run-tests');
-  await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 90000 });
-  const fails = await page.locator('.test.fail').allTextContents();
-  check(`lesson ${l.id}: solution passes`, fails.length === 0, fails.join(' | '));
-  if (['ik', 'mjcf', 'hillclimb', 'qlearn'].includes(l.id)) { await page.waitForTimeout(700); await page.screenshot({ path: `${shots}/academy-${l.id}.png` }); }
+  const passed = await page.evaluate((id) => !!lab.state.course.done[id], l.id);
+  check(`lesson ${l.id} (${l.kind}) passes`, passed);
+  if (['ik', 'mjcf', 'hillclimb', 'domainrand', 'segment', 'annotate', 'intrinsics', 'extrinsics', 'diffusion', 'supermimic', 'disco', 'so101motors', 'audit'].includes(l.id)) { await page.waitForTimeout(600); await page.screenshot({ path: `${shots}/academy-${l.id}.png` }); }
 }
 
 log('Teleop');
@@ -80,6 +103,63 @@ await page.waitForFunction(() => lab.state.evals.length >= 1, null, { timeout: 3
 await page.screenshot({ path: `${shots}/eval.png` });
 log('   rows:', JSON.stringify(await page.evaluate(() => lab.state.evals[0].rows.map((r) => [r.name, r.success, +r.time.toFixed(1), Math.round(r.smooth)]))));
 check('ROB-6 closes', await page.evaluate(() => !!lab.state.tickets['ROB-6']));
+
+log('Week 2: Dream Lab');
+await page.evaluate(() => { lab.state.guideOff = true; });
+await app('dreams'); await page.waitForFunction(() => document.querySelector('#w-status')?.textContent.includes('live'), null, { timeout: 30000 });
+await page.click('#w-snap'); await page.click('#w-snap');
+await page.selectOption('#w-wm select', 'cosmos_lora');
+const tuneBtn = page.locator('#w-wm button');
+check('LoRA fine-tune needs enough real demos', await tuneBtn.count() === 1);
+await tuneBtn.click();
+await page.fill('#w-prompt', 'put the red cube in the bin');
+await press('#w-go');
+await page.waitForFunction(() => document.querySelectorAll('#w-list .card').length >= 8, null, { timeout: 60000 });
+await page.waitForTimeout(1500); await page.screenshot({ path: `${shots}/dreams.png` });
+const dreamKinds = await page.evaluate(() => [...document.querySelectorAll('#w-list .card')].length);
+// keep everything, like a careless reviewer (the report should then flag the broken ones)
+await page.evaluate(() => document.querySelectorAll('#w-list .card').forEach((c) => [...c.querySelectorAll('button')].find((b) => b.textContent === 'Keep').click()));
+await press('#w-commit');
+await page.waitForSelector('#modal:not([hidden]) h2');
+log('   ', await page.locator('#modal h2').textContent(), '|', await page.locator('#modal p').first().textContent());
+await page.click('#modal button');
+const dreamsIn = await page.evaluate(async () => (await import('./js/util.js')).episodes.filter((e) => e.source === 'dream').map((e) => e.kind));
+log('    dream kinds:', JSON.stringify(dreamsIn));
+check('dreams were added to the dataset', dreamsIn.length === dreamKinds);
+
+log('Week 2: annotate, train with language, RL, export');
+await app('dataset'); await page.waitForTimeout(1200);
+await press('#auto-btn'); await page.waitForTimeout(300);
+const annotated = await page.evaluate(async () => (await import('./js/util.js')).episodes.filter((e) => e.robot === 'sprout' && e.subtasks?.length).length);
+check('auto-labeler annotated episodes', annotated > 20, annotated);
+await page.keyboard.press('b');
+await page.screenshot({ path: `${shots}/dataset-annot.png` });
+const dl = page.waitForEvent('download');
+await press('#export-btn'); await page.click('#modal label.check input'); // no images, keep it fast
+await page.click('#modal button:not(.ghost)');
+const file = await dl; const zipPath = `${shots}/export.zip`; await file.saveAs(zipPath);
+check('LeRobot export downloads a zip', (await import('node:fs')).statSync(zipPath).size > 10000);
+await app('train'); await page.waitForTimeout(300);
+await page.click('#model-pick label:has-text("SmolVLA") input');
+await page.selectOption('#lang-level select', 'subtask');
+await press('#train-btn');
+await page.waitForFunction(() => lab.state.policies.filter((p) => !p.baseline).length >= 2, null, { timeout: 30000 });
+check('ROB-10 closes after training with subtask captions', await page.evaluate(() => { lab.openApp('tickets'); return !!lab.state.tickets['ROB-10']; }));
+await app('train'); await page.waitForTimeout(300);
+await press('#rl-btn');
+await page.waitForFunction(() => lab.state.seen.rlDone, null, { timeout: 60000 });
+await page.screenshot({ path: `${shots}/train-rl.png` });
+check('RL fine-tuning ran', await page.evaluate(() => lab.state.policies.some((p) => p.rl)));
+
+log('Week 2: eval with references, physics and stats');
+await app('eval'); await page.waitForTimeout(1200);
+await press('#load-refs');
+await page.evaluate(() => { const f = lab.state.seen.evalForm; f.picks = lab.state.policies.filter((p) => ['lab/act-ref', 'lab/pi05-ref', 'lab/vqbet-ref'].includes(p.name)).map((p) => p.id); f.watch = 0; f.trials = 10; f.friction = 0.5; f.mass = 2.2; lab.openApp('tickets'); lab.openApp('eval'); });
+await page.waitForTimeout(1200); await press('#eval-run');
+await page.waitForFunction(() => lab.state.evals.at(-1)?.rows.length === 3, null, { timeout: 300000 });
+await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/eval-stats.png` });
+log('    physics-shift rows:', JSON.stringify(await page.evaluate(() => lab.state.evals.at(-1).rows.map((r) => [r.name, r.ok + '/' + r.n]))));
+check('McNemar verdict is shown', await page.locator('text=McNemar').count() > 0);
 
 log('Capstone (is it achievable?)');
 await page.evaluate(() => { lab.state.guideOff = true; }); await page.waitForTimeout(700);

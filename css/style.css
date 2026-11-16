@@ -98,3 +98,4 @@ textarea.code { width: 100%; min-height: 220px; flex: 1; background: #0a0c10; co
   .brand { font-size: 0; } .brand .logo { font-size: 20px; } #topbar button { padding: 4px 8px; font-size: 12px; } #toasts { left: 10px; right: 10px; }
   .view3d { min-height: 52vw; flex: none; } #topbar .brand .dim, #clock { display: none; } #topbar { gap: 8px; }
 }
+[hidden] { display: none !important; }

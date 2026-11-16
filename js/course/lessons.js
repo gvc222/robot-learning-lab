@@ -1,14 +1,23 @@
+import { MORE } from './lessons2.js';
 // Academy curriculum. Each lesson: explanation, starter code, a reference solution, and tests.
 // Python lessons run in Pyodide (CPython compiled to WebAssembly); tests are plain asserts.
 // `pre` runs before the learner's code. `viz` names a visualisation in apps/academy.js.
 
-export const UNITS = { 1: 'Robot basics', 2: 'Simulation with MuJoCo', 3: 'Reinforcement learning' };
+export const COURSES = [
+  { id: 'basics', title: 'Robot basics', blurb: 'Joint angles, kinematics and your first control loop.' },
+  { id: 'sim', title: 'Simulation & sim-to-real', blurb: 'Build MuJoCo worlds, script a pick, survive the reality gap.' },
+  { id: 'rl', title: 'Reinforcement learning', blurb: 'Rewards, Q-learning, random search and reward models.' },
+  { id: 'data', title: 'Data, language & human video', blurb: 'Subtasks, captions, egocentric pretraining, eval statistics, LeRobot export.' },
+  { id: 'hardware', title: 'Build an SO-101', blurb: 'From a box of parts to a calibrated arm with cameras.' },
+  { id: 'corl', title: 'CoRL 2026 Review Club', blurb: 'The award finalists and other landmark papers, reviewed hands-on.' },
+];
+const UNIT_COURSE = { 1: 'basics', 2: 'sim', 3: 'rl' };
 
 const PY_ARM = 'import math\nL1 = 0.22\nL2 = 0.22\n';
 
 export const LESSONS = [
   {
-    id: 'state', unit: 1, title: 'Describe a robot with numbers',
+    id: 'state', unit: 1, course: 'basics', title: 'Describe a robot with numbers',
     text: `<p>A robot arm is a chain of <b>links</b> connected by <b>joints</b>. If you know the angle of every joint, you know exactly where the whole arm is. That list of numbers is called the <b>joint state</b> (or <i>configuration</i>).</p>
 <p>Our desktop arm, Sprout, has 4 joints: base yaw, shoulder, elbow and wrist. Angles are measured in <b>radians</b>.</p>
 <p><b>Your task</b></p><ol><li>Make a list called <code>joint_angles</code> with four numbers (any values you like).</li><li>Set <code>gripper_open</code> to <code>True</code>.</li><li>Set <code>num_joints</code> using <code>len(...)</code>, not by typing 4.</li></ol>`,
@@ -22,7 +31,7 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'radians', unit: 1, title: 'Degrees to radians',
+    id: 'radians', unit: 1, course: 'basics', title: 'Degrees to radians',
     text: `<p>Humans think in degrees; robot software thinks in radians. A full turn is 360° = 2π radians, so</p><p class="mono">radians = degrees × π / 180</p>
 <p><b>Your task</b>: finish <code>deg_to_rad</code>, then use it to set <code>elbow</code> to 45 degrees.</p>`,
     pre: 'import math\n',
@@ -36,7 +45,7 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'fk', unit: 1, title: 'Forward kinematics', viz: 'fk',
+    id: 'fk', unit: 1, course: 'basics', title: 'Forward kinematics', viz: 'fk',
     text: `<p><b>Forward kinematics</b> answers: <i>given the joint angles, where is the hand?</i></p>
 <p>Take a flat arm with two links of length <code>L1</code> and <code>L2</code>. The first link points at angle θ₁. The second link is attached to its tip and bends a further θ₂, so it points at θ₁ + θ₂. Add the two links tip to tail:</p>
 <p class="mono">x = L1·cos(θ₁) + L2·cos(θ₁ + θ₂)<br>y = L1·sin(θ₁) + L2·sin(θ₁ + θ₂)</p>
@@ -52,7 +61,7 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'ik', unit: 1, title: 'Inverse kinematics', viz: 'ik',
+    id: 'ik', unit: 1, course: 'basics', title: 'Inverse kinematics', viz: 'ik',
     text: `<p><b>Inverse kinematics</b> is the question you actually care about: <i>I want the hand at (x, y). What joint angles get it there?</i></p>
 <p>For two links there is a closed-form answer from the law of cosines:</p>
 <p class="mono">cos(θ₂) = (x² + y² − L1² − L2²) / (2·L1·L2)<br>θ₁ = atan2(y, x) − atan2(L2·sin(θ₂), L1 + L2·cos(θ₂))</p>
@@ -68,7 +77,7 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'pcontrol', unit: 1, title: 'A control loop', viz: 'pcontrol',
+    id: 'pcontrol', unit: 1, course: 'basics', title: 'A control loop', viz: 'pcontrol',
     text: `<p>Knowing the angle you want is not the same as being there. A <b>controller</b> runs many times per second: measure where the joint is, compare with where it should be, push accordingly.</p>
 <p>The simplest one is <b>proportional (P) control</b>: push in proportion to the error.</p><p class="mono">command = kp × (target − current)</p>
 <p>Too small a gain <code>kp</code> and the joint crawls. Too big and it overshoots and oscillates (with our 20 Hz loop, anything above 20 gets ugly; above 40 it explodes).</p>
@@ -83,7 +92,7 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'mjcf', unit: 2, title: 'Build a world in MuJoCo', viz: 'mjcf', lang: 'xml',
+    id: 'mjcf', unit: 2, course: 'sim', title: 'Build a world in MuJoCo', viz: 'mjcf', lang: 'xml',
     text: `<p><b>MuJoCo</b> is the physics engine behind a huge share of robot learning research. You describe a world in an XML format called <b>MJCF</b>; MuJoCo simulates it.</p>
 <ul><li><code>&lt;body&gt;</code> is a rigid object. <code>pos</code> is its x y z position in metres.</li><li><code>&lt;geom&gt;</code> gives a body its shape. For a box, <code>size</code> is the <i>half</i>-width in x, y, z.</li><li><code>&lt;freejoint/&gt;</code> lets a body move freely. Without a joint, a body is welded to the world.</li></ul>
 <p>The scene has a table and a red cube resting on it. This is real MuJoCo: the same XML loads in the desktop simulator.</p>
@@ -93,7 +102,7 @@ export const LESSONS = [
     hint: 'Copy the red body, rename it <code>green</code>, change <code>pos</code> to something like <code>"0.1 0 0.2"</code> and the <code>rgba</code>. Forgot the <code>&lt;freejoint/&gt;</code>? Then it hangs in the air.',
   },
   {
-    id: 'waypoints', unit: 2, title: 'Script a pick', viz: 'waypoints',
+    id: 'waypoints', unit: 2, course: 'sim', title: 'Script a pick', viz: 'waypoints',
     text: `<p>Before learning anything, robots were (and mostly still are) programmed with <b>waypoints</b>: go here, then here, close the gripper, go there.</p>
 <p>The red cube sits at x = 0.25, y = 0.10. Its centre is 2 cm above the table. Each waypoint is <code>(x, y, z, grip)</code> in metres, with <code>grip</code> 0 = open and 1 = closed. The lab runs your list on the simulated Sprout arm in MuJoCo.</p>
 <p><b>Your task</b>: add three waypoints so the arm goes down to the cube, closes, and lifts it back up to z = 0.12.</p>
@@ -104,7 +113,7 @@ export const LESSONS = [
     tests: [['waypoints is a list of at least 4 (x, y, z, grip) entries', `assert isinstance(waypoints, list) and len(waypoints) >= 4, "need at least 4 waypoints"\nfor w in waypoints:\n    assert len(w) == 4, "each waypoint needs 4 numbers: x, y, z, grip"`]],
   },
   {
-    id: 'reward', unit: 3, title: 'Design a reward',
+    id: 'reward', unit: 3, course: 'rl', title: 'Design a reward',
     text: `<p>In <b>reinforcement learning</b> (RL) nobody shows the robot what to do. It tries things, and a <b>reward</b> number tells it how well that went. The robot’s only goal is to collect as much reward as possible, so the reward function <i>is</i> the task description.</p>
 <p>A reward that only pays out at the very end (“cube is in the bin: +10”) is called <b>sparse</b>: honest, but the robot may flail for a very long time before stumbling on it. So we add <b>shaping</b>: small rewards for progress.</p>
 <p><b>Your task</b>: write a reward that</p><ul><li>starts at minus the gripper-to-cube distance (closer is better),</li><li>adds 1 if the cube is lifted,</li><li>adds 10 if the cube is in the bin.</li></ul>`,
@@ -118,7 +127,7 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'qlearn', unit: 3, title: 'Q-learning from scratch', viz: 'qlearn',
+    id: 'qlearn', unit: 3, course: 'rl', title: 'Q-learning from scratch', viz: 'qlearn',
     text: `<p>Time to actually train something. A gripper lives on a 5×5 grid. It starts top-left and must reach the cube. Dark cells are obstacles (−5 and the episode ends); every step costs −0.1; reaching the cube pays +10.</p>
 <p><b>Q-learning</b> keeps a table <code>Q[state][action]</code>: “how much total reward do I expect if I take this action here and act well afterwards?” After every step it nudges one entry toward what it just experienced:</p>
 <p class="mono">target = r + γ · max(Q[next_state])&nbsp;&nbsp;&nbsp;(just r if the episode ended)<br>Q[s][a] += α · (target − Q[s][a])</p>
@@ -168,7 +177,7 @@ def _greedy_path(Q):
     ],
   },
   {
-    id: 'hillclimb', unit: 3, title: 'RL on a real simulator', viz: 'hillclimb',
+    id: 'hillclimb', unit: 3, course: 'rl', title: 'RL on a real simulator', viz: 'hillclimb',
     text: `<p>Tables do not scale to robots: an arm has endlessly many states. So we give the robot a <b>policy with parameters</b> and search for parameters that earn more reward.</p>
 <p>Here the policy is tiny: three gains, one per axis.</p><p class="mono">action = gain × (target position − hand position)</p>
 <p>The task: reach a point above the red cube as fast as possible, in MuJoCo. Reward is minus the distance at every step, so dawdling is expensive. The starting gains are sluggish.</p>
@@ -183,4 +192,5 @@ def _greedy_path(Q):
       ['keep_better keeps the higher return', `assert keep_better([1], -5.0, [2], -3.0) == ([2], -3.0)\nassert keep_better([1], -2.0, [2], -3.0) == ([1], -2.0)`],
     ],
   },
+  ...MORE,
 ];

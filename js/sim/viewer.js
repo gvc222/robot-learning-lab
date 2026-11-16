@@ -88,7 +88,37 @@ export class Viewer {
           0, 0, 0, 1);
       }
     }
+    if (this.mjCam) this.syncMujocoCamera();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // Look through one of the MuJoCo cameras (e.g. 'front' or 'wrist') instead of the orbit camera.
+  useMujocoCamera(sim, name) {
+    this.mjCam = name ? { sim, id: sim.cameraId(name) } : null;
+    this.controls.enabled = !name;
+    if (name) { this.camera.fov = sim.model.cam_fovy[this.mjCam.id]; this.camera.updateProjectionMatrix(); }
+    this.draw();
+  }
+
+  syncMujocoCamera() {
+    const { sim, id } = this.mjCam, p = sim.data.cam_xpos, R = sim.data.cam_xmat, j = 9 * id;
+    // MuJoCo and three.js cameras share a convention: look down -z with +y up. Columns of xmat are the camera axes.
+    const m = new THREE.Matrix4().makeBasis(
+      new THREE.Vector3(R[j], R[j + 3], R[j + 6]), new THREE.Vector3(R[j + 1], R[j + 4], R[j + 7]), new THREE.Vector3(R[j + 2], R[j + 5], R[j + 8]));
+    this.camera.position.set(p[3 * id], p[3 * id + 1], p[3 * id + 2]);
+    this.camera.quaternion.setFromRotationMatrix(m);
+    this.camera.updateMatrixWorld(true);
+  }
+
+  // JPEG data URL of the current view (used for "camera snapshots" and dataset export).
+  snapshot(w = 320, h = 240, quality = 0.8) {
+    const r = this.renderer, size = r.getSize(new THREE.Vector2()), aspect = this.camera.aspect;
+    r.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
+    this.draw();
+    const url = r.domElement.toDataURL('image/jpeg', quality);
+    r.setSize(size.x, size.y, false); this.camera.aspect = aspect; this.camera.updateProjectionMatrix();
+    this.draw();
+    return url;
   }
 
   dispose() {

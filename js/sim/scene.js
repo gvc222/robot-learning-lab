@@ -44,6 +44,8 @@ export function buildXML(robotId = 'sprout') {
   </default>
   <worldbody>
     <light pos="0.3 -0.3 1.2" dir="-0.1 0.2 -1" diffuse="0.9 0.9 0.9"/>
+    <!-- fixed scene camera, looking at the workspace from the front (used for datasets and calibration) -->
+    <camera name="front" pos="0.78 0 0.46" xyaxes="0 1 0 -0.633 0 0.774" fovy="50"/>
     <geom name="table" type="plane" size="0.8 0.8 0.1" rgba="0.86 0.84 0.8 1"/>
     <geom name="bin_floor" type="box" pos="${b.x} ${b.y} 0.001" size="${b.half} ${b.half} 0.001" rgba="0.25 0.27 0.33 1" contype="0" conaffinity="0"/>
     ${wall('n', b.x + b.half + t, b.y, t, b.half + 2 * t)}
@@ -65,6 +67,7 @@ export function buildXML(robotId = 'sprout') {
               <joint name="wrist" axis="0 1 0" range="-3.3 3.3"/>
               <geom class="arm" type="box" pos="0 0 0.03" size="0.018 0.05 0.012" mass="0.08" rgba="0.2 0.2 0.23 1"/>
               <site name="tcp" pos="0 0 ${GEOM.L3}" size="0.004" rgba="0 1 0 0"/>
+              <camera name="wrist" pos="0.03 0 0.02" xyaxes="0 1 0 1 0 0" fovy="70"/>
               <body name="finger_l" pos="0 0 0.072" gravcomp="1">
                 <joint name="finger_l" type="slide" axis="0 1 0" range="0 0.04" damping="4"/>
                 <geom class="pad" type="box" pos="0 0.005 0" size="0.011 0.005 0.03" mass="0.02"/>

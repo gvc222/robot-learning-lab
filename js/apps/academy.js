@@ -1,7 +1,10 @@
 // Academy: read, write code, run tests. Python runs locally in Pyodide; MuJoCo lessons use the real engine.
 import { h, fill, $, state, save, bus, toast, lineChart, ask } from '../util.js';
-import { LESSONS, UNITS } from '../course/lessons.js';
-import { Sim, loadMujoco, CONTROL_DT } from '../sim/sim.js';
+import { LESSONS, COURSES } from '../course/lessons.js';
+import { Sim, loadMujoco, CONTROL_DT, rng, sampleLayout } from '../sim/sim.js';
+import { Rollout, DEMO_KINDS } from '../sim/operator.js';
+import { trueSubtasks } from '../annotate.js';
+import { NEW_LABS } from './labs2.js';
 import { Viewer } from '../sim/viewer.js';
 
 let pyPromise = null;
@@ -151,38 +154,93 @@ const LABS = {
     raf = requestAnimationFrame(loop);
     return { tests, cleanup: () => { cancelAnimationFrame(raf); viewer.dispose(); sim.dispose(); } };
   },
+  ...NEW_LABS,
 };
+
+
+// Lessons in course order (the nav and "Next lesson" follow this).
+export const ORDERED = COURSES.flatMap((c) => LESSONS.filter((l) => l.course === c.id));
+const kindOf = (l) => l.kind || (l.lang === 'xml' ? 'xml' : 'py');
 
 export default {
   id: 'academy', icon: '📚', title: 'Academy',
-  mount(el) {
-    let lesson = LESSONS.find((l) => !state.course.done[l.id]) || LESSONS[0], labCleanup = null, ns = null, busy = false, alive = true;
-    const nav = h('.side.lesson-nav', { style: 'width:210px' }), text = h('.lesson-text'), editor = h('textarea.code', { spellcheck: false });
-    const results = h('div'), term = h('.term', { style: 'min-height:40px' }), panel = h('.col'), title = h('h2');
+  mount(el, { openApp } = {}) {
+    let lesson = ORDERED.find((l) => l.id === state.seen.lastLesson) || ORDERED.find((l) => !state.course.done[l.id]) || ORDERED[0];
+    let labCleanup = null, ns = null, busy = false, alive = true;
+    const open_ = state.seen.openCourses ||= { [lesson.course]: true };
+    const nav = h('.side.lesson-nav', { style: 'width:230px' }), text = h('.lesson-text'), editor = h('textarea.code', { spellcheck: false });
+    const results = h('div'), term = h('.term', { style: 'min-height:40px' }), panel = h('.col'), title = h('h2'), crumb = h('.dim', { style: 'font-size:12px' });
     const runBtn = h('button#run-tests', { onclick: run }, 'Run tests');
-    const nextBtn = h('button.ok', { hidden: true, onclick: () => { const i = LESSONS.indexOf(lesson); if (LESSONS[i + 1]) open(LESSONS[i + 1]); } }, 'Next lesson →');
+    const nextBtn = h('button.ok#next-lesson', { hidden: true, onclick: () => { const i = ORDERED.indexOf(lesson); if (ORDERED[i + 1]) open(ORDERED[i + 1]); } }, 'Next lesson →');
+    const hintBtn = h('button.ghost', { onclick: () => { fill(results, h('.card', { html: '💡 ' + lesson.hint })); } }, 'Hint');
+    const resetBtn = h('button.ghost', { onclick: async () => { if (await ask('Replace your code with the starter?', 'Reset')) { editor.value = lesson.starter; delete state.course.code[lesson.id]; save(); } } }, 'Reset');
+    const solBtn = h('button.ghost', { onclick: async () => { if (await ask('Show the reference solution? Try the hint first.', 'Show it')) { editor.value = lesson.solution; state.course.code[lesson.id] = lesson.solution; save(); } } }, 'Solution');
+    const codeRow = h('.row', {}, runBtn, nextBtn, hintBtn, resetBtn, solBtn);
+    const quizBox = h('#quiz.col', { style: 'gap:10px' });
+    const sidePanel = h('.side.right', { style: 'width:360px' }, h('h3', {}, 'Lab bench'), panel);
     editor.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') { e.preventDefault(); const s = editor.selectionStart; editor.setRangeText('    ', s, editor.selectionEnd, 'end'); }
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); }
     });
     editor.addEventListener('input', () => { state.course.code[lesson.id] = editor.value; save(); });
 
+    function pass() {
+      if (!state.course.done[lesson.id]) toast(`Lesson passed: ${lesson.title}`);
+      state.course.done[lesson.id] = true; save(); renderNav();
+      nextBtn.hidden = !ORDERED[ORDERED.indexOf(lesson) + 1];
+    }
     function renderNav() {
-      fill(nav, ...Object.entries(UNITS).flatMap(([u, name]) => [h('.unit', {}, `Unit ${u} · ${name}`),
-        ...LESSONS.filter((l) => l.unit === +u).map((l) => h('button' + (l === lesson ? '.sel' : ''), { onclick: () => open(l) }, h('span', { class: state.course.done[l.id] ? 'good' : 'dim' }, state.course.done[l.id] ? '✓ ' : '○ '), l.title))]),
-        !state.tickets['ROB-2'] ? h('p', { style: 'margin:14px 8px' }, h('button.small.ghost', { onclick: () => { state.seen.skipBasics = true; save(); toast('Unit 1 skipped. The lessons stay here if you want them later.'); } }, 'I know this: skip Unit 1')) : '');
+      fill(nav, ...COURSES.flatMap((c) => {
+        const ls = ORDERED.filter((l) => l.course === c.id), n = ls.filter((l) => state.course.done[l.id]).length, isOpen = open_[c.id];
+        return [h('button.unit', { style: 'background:none;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:8px 8px 3px;text-align:left;width:100%;font-weight:600', onclick: () => { open_[c.id] = !isOpen; save(); renderNav(); } },
+          `${isOpen ? '▾' : '▸'} ${c.title} `, h('span', { style: `font-weight:400;${n === ls.length ? 'color:var(--good)' : ''}` }, `${n}/${ls.length}`)),
+        ...(isOpen ? ls.map((l) => h('button' + (l === lesson ? '.sel' : ''), { onclick: () => open(l) }, h('span', { class: state.course.done[l.id] ? 'good' : 'dim' }, state.course.done[l.id] ? '✓ ' : kindOf(l) === 'quiz' ? '? ' : kindOf(l) === 'lab' ? '⚙ ' : '○ '), l.title)) : [])];
+      }),
+      !state.tickets['ROB-2'] ? h('p', { style: 'margin:14px 8px' }, h('button.small.ghost', { onclick: () => { state.seen.skipBasics = true; save(); toast('Robot basics skipped. The lessons stay here if you want them later.'); } }, 'I know this: skip Robot basics')) : '');
     }
     function open(l) {
-      labCleanup?.(); labCleanup = null; lesson = l;
-      title.textContent = `${l.unit}.${LESSONS.filter((x) => x.unit === l.unit).indexOf(l) + 1}  ${l.title}`;
-      text.innerHTML = l.text; editor.value = state.course.code[l.id] ?? l.starter;
-      fill(results, ); term.textContent = l.lang === 'xml' ? 'MJCF (MuJoCo XML). Press Run tests to compile and simulate it.' : 'Python output appears here. Ctrl/⌘ + Enter runs the tests.';
-      fill(panel, l.viz ? h('p.dim', {}, 'Run your code to bring this panel to life.') : h('p.dim', {}, 'No visual for this one: the tests are the feedback.'));
-      nextBtn.hidden = true; renderNav(); el.querySelector('.mainc').scrollTop = 0;
+      labCleanup?.(); labCleanup = null; lesson = l; state.seen.lastLesson = l.id; open_[l.course] = true; save();
+      const c = COURSES.find((x) => x.id === l.course);
+      crumb.textContent = `${c.title} · lesson ${ORDERED.filter((x) => x.course === l.course).indexOf(l) + 1}`;
+      title.textContent = l.title;
+      text.innerHTML = l.text;
+      text.querySelectorAll('a').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
+      const k = kindOf(l);
+      editor.hidden = codeRow.hidden = term.hidden = !(k === 'py' || k === 'xml');
+      hintBtn.hidden = resetBtn.hidden = solBtn.hidden = false;
+      quizBox.hidden = k !== 'quiz';
+      sidePanel.hidden = k === 'quiz';
+      fill(results); nextBtn.hidden = true;
+      if (k === 'py' || k === 'xml') {
+        editor.value = state.course.code[l.id] ?? l.starter;
+        term.textContent = k === 'xml' ? 'MJCF (MuJoCo XML). Press Run tests to compile and simulate it.' : 'Python output appears here. Ctrl/⌘ + Enter runs the tests.';
+        fill(panel, l.viz ? h('p.dim', {}, 'Run your code to bring this panel to life.') : h('p.dim', {}, 'No visual for this one: the tests are the feedback.'));
+      } else if (k === 'quiz') renderQuiz(l);
+      else if (k === 'lab') {
+        fill(panel);
+        Promise.resolve(LABS[l.viz]({ panel, done: () => { if (lesson === l) pass(); } })).then((r) => { labCleanup = r?.cleanup || null; });
+        if (state.course.done[l.id]) nextBtn.hidden = false;
+      }
+      if (state.course.done[l.id] && k !== 'py' && k !== 'xml') { results.replaceChildren(h('p.good', {}, '✓ Completed')); nextBtn.hidden = !ORDERED[ORDERED.indexOf(l) + 1]; }
+      renderNav(); el.querySelector('.mainc').scrollTop = 0;
+    }
+    function renderQuiz(l) {
+      const answers = {};
+      fill(quizBox, ...l.quiz.map((q, qi) => {
+        const fb = h('.dim', { style: 'font-size:12.5px;min-height:1em' });
+        const opts = q.options.map((o, oi) => h('button.ghost.quiz-opt', { style: 'text-align:left;font-weight:400;display:block;width:100%;margin-bottom:4px', 'data-q': qi, 'data-o': oi, onclick: (e) => {
+          const ok = oi === q.answer; answers[qi] = ok;
+          e.currentTarget.parentElement.querySelectorAll('button').forEach((b) => { b.style.borderColor = ''; });
+          e.currentTarget.style.borderColor = ok ? 'var(--good)' : 'var(--bad)';
+          fb.innerHTML = ok ? '<span class="good">Correct.</span>' : '<span class="bad">Not quite. Re-read the summary above and try again.</span>';
+          if (l.quiz.every((_, i) => answers[i])) pass();
+        } }, o));
+        return h('.card', {}, h('b', {}, `${qi + 1}. ${q.q}`), h('div', { style: 'margin-top:8px' }, opts), fb);
+      }));
     }
     async function run() {
       if (busy) return; busy = true; runBtn.disabled = true; runBtn.textContent = 'Running…';
-      labCleanup?.(); labCleanup = null; fill(panel, ); fill(results, );
+      labCleanup?.(); labCleanup = null; fill(panel); fill(results);
       const code = editor.value, out = [], rows = []; let pyOk = true, py = null;
       try {
         if (lesson.lang !== 'xml') {
@@ -206,23 +264,13 @@ export default {
       } catch (e) { rows.push(['lab ran', false, String(e.message || e)]); }
       term.textContent = out.join('\n') || (lesson.lang === 'xml' ? 'compiled with MuJoCo.' : '(no output)');
       fill(results, ...rows.map(([name, ok, msg]) => h('.test.' + (ok ? 'pass' : 'fail'), {}, name, !ok && msg ? h('.dim', { style: 'margin-left:18px;white-space:pre-wrap' }, msg) : null)));
-      const passed = rows.length > 0 && rows.every((r) => r[1]);
-      if (passed) {
-        if (!state.course.done[lesson.id]) toast(`Lesson passed: ${lesson.title}`);
-        state.course.done[lesson.id] = true; save(); renderNav();
-        nextBtn.hidden = !LESSONS[LESSONS.indexOf(lesson) + 1];
-      }
+      if (rows.length > 0 && rows.every((r) => r[1])) pass();
       busy = false; runBtn.disabled = false; runBtn.textContent = 'Run tests';
     }
 
     el.append(h('.split', {}, nav,
-      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, title, text, editor,
-        h('.row', {}, runBtn, nextBtn,
-          h('button.ghost', { onclick: () => { fill(results, h('.card', { html: '💡 ' + lesson.hint })); } }, 'Hint'),
-          h('button.ghost', { onclick: async () => { if (await ask('Replace your code with the starter?', 'Reset')) { editor.value = lesson.starter; delete state.course.code[lesson.id]; save(); } } }, 'Reset'),
-          h('button.ghost', { onclick: async () => { if (await ask('Show the reference solution? Try the hint first.', 'Show it')) { editor.value = lesson.solution; state.course.code[lesson.id] = lesson.solution; save(); } } }, 'Solution')),
-        results, term),
-      h('.side.right', { style: 'width:350px' }, h('h3', {}, 'Lab bench'), panel)));
+      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, crumb, title, text, quizBox, editor, codeRow, results, term),
+      sidePanel));
     open(lesson);
     getPy().catch(() => {}); // warm up in the background
     return () => { alive = false; labCleanup?.(); };

@@ -2,14 +2,17 @@
 import { state, episodes } from './util.js';
 import { LESSONS } from './course/lessons.js';
 
-const unitDone = (units) => LESSONS.filter((l) => units.includes(l.unit)).every((l) => state.course.done[l.id]);
+const courseDone = (courses) => LESSONS.filter((l) => courses.includes(l.course)).every((l) => state.course.done[l.id]);
+const courseCount = (c) => `${LESSONS.filter((l) => l.course === c && state.course.done[l.id]).length}/${LESSONS.filter((l) => l.course === c).length} lessons`;
+const lessonsDone = (ids) => ids.filter((id) => state.course.done[id]).length;
+const goodDreams = () => episodes.filter((e) => e.source === 'dream' && e.label === 'keep' && e.kind === 'good').length;
 const myGoodDemos = () => episodes.filter((e) => e.source === 'you' && e.task === 'red_bin' && e.robot === 'sprout' && e.metrics.success).length;
 
 export const TICKETS = [
   { id: 'ROB-1', title: 'Meet the team', app: 'tickets', desc: 'Badge in and say hi.', done: () => !!state.name },
   { id: 'ROB-2', title: 'Academy: robot basics', app: 'academy',
     desc: 'Five short coding lessons: joint angles, kinematics and a control loop. You write the code, the tests check it.',
-    done: () => unitDone([1]) || state.seen.skipBasics, progress: () => `${LESSONS.filter((l) => l.unit === 1 && state.course.done[l.id]).length}/5 lessons` },
+    done: () => courseDone(['basics']) || state.seen.skipBasics, progress: () => courseCount('basics') },
   { id: 'ROB-3', title: 'Teleoperate 3 demos', app: 'teleop',
     desc: 'Drive the Sprout arm with your keyboard and record 3 successful demos of “put the red cube in the bin”.',
     done: () => myGoodDemos() >= 3, progress: () => `${Math.min(3, myGoodDemos())}/3 successful demos` },
@@ -23,11 +26,33 @@ export const TICKETS = [
     desc: 'Compare your policy against Maya’s baseline (trained on the uncleaned data): at least 10 trials each, same task language.',
     done: () => state.evals.some((e) => e.rows.length >= 2 && e.trials >= 10) },
   { id: 'ROB-7', title: 'Academy: simulation & RL', app: 'academy', optional: true,
-    desc: 'Optional deep-dive: write MuJoCo XML, script a pick, design a reward, and train with reinforcement learning.',
-    done: () => unitDone([2, 3]), progress: () => `${LESSONS.filter((l) => l.unit > 1 && state.course.done[l.id]).length}/${LESSONS.filter((l) => l.unit > 1).length} lessons` },
+    desc: 'Optional deep-dive: MuJoCo XML, a scripted pick, sim-to-real, rewards, Q-learning, RL on a simulator and reward models.',
+    done: () => courseDone(['sim', 'rl']), progress: () => `${courseCount('sim')} sim · ${courseCount('rl')} RL` },
   { id: 'ROB-8', title: 'Capstone: ship the Friday demo', app: 'brief',
     desc: 'No more hand-holding. Read the project brief and hit every metric.',
     done: () => state.capstone.done },
+  // ── Week 2: research tools ──
+  { id: 'ROB-9', title: 'Dream up training data', app: 'dreams', week: 2,
+    desc: 'Use a video world model to generate neural trajectories (DreamGen-style), review them, and add at least 4 good ones to your dataset.',
+    done: () => goodDreams() >= 4, progress: () => `${Math.min(4, goodDreams())}/4 good dreams in the dataset` },
+  { id: 'ROB-10', title: 'Annotate subtasks, train with language', app: 'dataset', week: 2,
+    desc: 'Segment and caption episodes (by hand or with the auto-labeler), then train a language-conditioned policy with subtask captions.',
+    done: () => state.policies.some((p) => !p.baseline && !p.reference && p.cfg?.lang && p.cfg.lang !== 'task' && p.stats?.annotated > 0) },
+  { id: 'ROB-11', title: 'Academy: data, language & human video', app: 'academy', week: 2,
+    desc: 'Subtask segmentation, what language buys you, egocentric pretraining, evaluation statistics, LeRobot export.',
+    done: () => courseDone(['data']), progress: () => courseCount('data') },
+  { id: 'ROB-12', title: 'Break it on the “real robot”', app: 'eval', week: 2,
+    desc: 'Evaluate under shifted physics or the “real robot” toggle, and compare a domain-randomized policy with a normal one.',
+    done: () => !!state.seen.sim2realEval && state.policies.some((p) => p.dr) },
+  { id: 'ROB-13', title: 'Build and calibrate an SO-101', app: 'academy', week: 2,
+    desc: 'The open-source arm from LeRobot: parts, motor IDs, assembly, wrist camera, arm calibration, camera intrinsics and extrinsics.',
+    done: () => courseDone(['hardware']), progress: () => courseCount('hardware') },
+  { id: 'ROB-14', title: 'CoRL 2026 Review Club', app: 'academy', week: 2,
+    desc: 'Review the CoRL 2026 award finalists (SuperMimic won Best Paper) plus Diffusion Policy, FLORA and DreamGen. Complete at least 6.',
+    done: () => LESSONS.filter((l) => l.course === 'corl' && state.course.done[l.id]).length >= 6, progress: () => courseCount('corl') },
+  { id: 'ROB-15', title: 'Ship your data to LeRobot', app: 'dataset', week: 2,
+    desc: 'Export your kept episodes as a LeRobotDataset bundle you can train with the real LeRobot.',
+    done: () => !!state.seen.exported },
 ];
 
 export const activeTicket = () => TICKETS.find((t) => !t.optional && !t.done());
@@ -49,6 +74,14 @@ export const BRIEFINGS = {
   'ROB-5': [['Maya', 'Dataset looks reviewed. Open <b>Train</b> and fine-tune <b>ACT</b> on “put the red cube in the bin”. Watch the train and validation loss.'],
     ['cluster-bot', 'Reminder: every job is billed in GPU-hours. Your usage is in the top bar.']],
   'ROB-6': [['Maya', 'I trained a baseline, <code>maya/act-rawdata</code>, on the same demos <i>without</i> any cleaning. Put both on the <b>Eval</b> workbench with the same task language and see what your QA was worth. Then play with the parameters.']],
+  'ROB-9': [['Maya', 'Week 2. You have seen how expensive teleop is. Today: <b>world models</b>. Open the <b>Dream Lab</b>, snapshot the scene from the robot camera, and prompt a video model to imagine demos for you.'],
+    ['Dev', 'Fair warning: dreams lie. Objects teleport, the model ignores the prompt. Review them like my night shift.']],
+  'ROB-10': [['Maya', 'One sentence per 8-second demo wastes information. Segment the episodes into subtasks and caption them (the <b>Dataset</b> auto-labeler is a FLORA-style VLM), then train a language model with <b>subtask captions</b>.']],
+  'ROB-11': [['Maya', 'Time to read. The <b>Academy</b> has a new course on data: subtasks, language, human video, and how many trials an eval really needs.']],
+  'ROB-12': [['Maya', 'Simulators flatter you. In <b>Eval</b>, crank friction and mass or flip the “real robot” switch. Then train one policy with <b>domain randomization</b> and compare.']],
+  'ROB-13': [['Dev', 'Our SO-101 kits arrived. Before you touch one, do the <b>Build an SO-101</b> course: motor IDs, calibration and both kinds of camera calibration.']],
+  'ROB-14': [['Maya', 'Reading group this week: the <b>CoRL 2026</b> award finalists, reviewed hands-on. SuperMimic took Best Paper. Bring opinions.']],
+  'ROB-15': [['Maya', 'Last one: <b>export</b> your kept demos as a LeRobotDataset so the real-robot team can train on them.']],
   'ROB-8': [['Maya', 'You are onboarded. We have a demo on Friday and it is yours. The brief is in <b>Capstone</b>. Different robot, two task languages, real constraints. Good luck!'],
     ['Dev', 'Ping me (the request button in Dataset) if you need operator hours. They are not free.']],
 };
@@ -89,5 +122,24 @@ export const GUIDE = {
   ],
   'ROB-8': [
     { app: 'brief', sel: '#brief-reqs', text: 'Your targets. They update live from your eval runs. How you get there is up to you.' },
+  ],
+  'ROB-9': [
+    { app: 'dreams', sel: '#w-snap', text: 'A world model starts from a real first frame. Take a few <b>snapshots</b> of the scene from the robot’s front camera (new layout between each).', until: () => document.querySelectorAll('#w-snaps img').length >= 2 },
+    { app: 'dreams', sel: '#w-wm', text: 'Zero-shot world models don’t know your arm. Pick a <b>+ LoRA</b> model and fine-tune it on your teleop first: that is step 1 of DreamGen.' },
+    { app: 'dreams', sel: '#w-prompt', text: 'Write what should happen. Prompts that match a lab task get labelled with that task.' },
+    { app: 'dreams', sel: '#w-go', text: 'Dream. Each clip costs a little GPU time.', until: () => state.seen.dreamed },
+    { app: 'dreams', sel: '#w-list', text: 'Review every dream: keep it only if it follows the prompt and obeys physics (watch for cubes that blink or jump). Then add the kept ones.' },
+  ],
+  'ROB-10': [
+    { app: 'dataset', sel: '#d-annot', text: 'The coloured bar is the subtask timeline. Scrub, press <b>Split here (B)</b> to add a boundary, and pick a caption for each segment.' },
+    { app: 'dataset', sel: '#auto-btn', text: 'Or let the FLORA-style auto-labeler caption everything and score outcomes 1–5. Spot-check it.', until: () => state.seen.annotated },
+    { app: 'train', sel: '#lang-level', text: 'Pick a language model (SmolVLA, π0.5, GR00T…) and set <b>Language supervision</b> to subtask or dense captions. Then train.' },
+  ],
+  'ROB-12': [
+    { app: 'eval', sel: '#eval-params', text: 'Scroll to <b>Physics</b>: lower friction, raise mass, or tick “real robot”. Run a policy and watch grasps slip.' },
+    { app: 'train', sel: '#hparams', text: 'Now train a policy with <b>Domain randomization</b> ticked, and evaluate both under the shifted physics.' },
+  ],
+  'ROB-15': [
+    { app: 'dataset', sel: '#export-btn', text: 'Export your kept episodes. The zip includes a Python script that rebuilds them as a real LeRobotDataset.' },
   ],
 };

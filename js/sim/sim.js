@@ -44,12 +44,26 @@ export class Sim {
       red: id('mjOBJ_BODY', 'red'), blue: id('mjOBJ_BODY', 'blue'),
     };
     this.nsub = Math.round(CONTROL_DT / this.model.opt.timestep);
+    // remember nominal physics so eval can perturb and restore it
+    this.nominal = { friction: Float64Array.from(this.model.geom_friction), mass: Float64Array.from(this.model.body_mass) };
+    this.cubeGeoms = ['red', 'blue'].map((n) => id('mjOBJ_GEOM', n));
+    this.cubeBodies = [this.ids.red, this.ids.blue];
     this.target = [...HOME];
     this.grip = 0;
     this.reset();
   }
 
   dispose() { this.data.delete(); this.model.delete(); }
+
+  // Sim-to-real knobs: scale cube/finger friction and cube mass. 1 = nominal.
+  setPhysics({ friction = 1, mass = 1 } = {}) {
+    const f = this.model.geom_friction, m = this.model.body_mass;
+    for (let i = 0; i < f.length; i++) f[i] = this.nominal.friction[i] * (i % 3 === 0 ? friction : 1);
+    for (const b of this.cubeBodies) m[b] = this.nominal.mass[b] * mass;
+    this.physics = { friction, mass };
+  }
+
+  cameraId(name) { return this.mj.mj_name2id(this.model, this.mj.mjtObj.mjOBJ_CAMERA.value, name); }
 
   // Analytic IK: yaw to face the target, 2-link solve in the vertical plane, wrist keeps the gripper pointing down.
   ik([x, y, z]) {

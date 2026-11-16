@@ -20,6 +20,7 @@ export const PERFECT = {
   latency: 0,       // seconds per inference call
   idleStart: 0,     // steps of doing nothing at the start
   fumble: 0,        // probability of letting go of the cube mid-carry
+  carry: 1,         // speed multiplier while holding the object (domain-randomized policies learn to carry gently)
 };
 
 const clip = (v, a = -1, b = 1) => Math.max(a, Math.min(b, v));
@@ -120,7 +121,7 @@ export class Rollout {
         a[3] = this.grip;
         if (wp) {
           const v = s.robot.vmax * CONTROL_DT, t = s.target;
-          const slow = this.phase === 1 || this.phase === 5 ? 0.6 : 1;
+          const slow = (this.phase === 1 || this.phase === 5 ? 0.6 : 1) * (this.phase >= 3 && this.phase <= 5 ? p.carry : 1);
           for (let i = 0; i < 3; i++) a[i] = clip(clip((wp[i] - t[i]) / v * 0.6, -p.speed * slow, p.speed * slow) + this.noise[i]);
         }
       }
