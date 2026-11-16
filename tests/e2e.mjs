@@ -12,6 +12,12 @@ const press = (sel) => page.evaluate((s) => document.querySelector(s).click(), s
 await page.fill('#modal input', 'Tester'); await page.click('#modal button');
 await page.evaluate(() => { lab.state.guideOff = false; });
 
+log('Dock');
+for (const id of ['dataset', 'train', 'academy', 'sandbox']) {
+  await page.click(`#dock [data-app="${id}"]`); await page.waitForTimeout(200);
+  const active = await page.evaluate(() => [...document.querySelectorAll('#dock button.active')].map((b) => b.dataset.app));
+  check(`clicking ${id} highlights exactly one dock icon`, active.length === 1 && active[0] === id, active.join(','));
+}
 log('Academy');
 await app('academy');
 const lessons = await page.evaluate(async () => (await import('./js/apps/academy.js')).ORDERED.map((l) => ({ id: l.id, title: l.title, kind: l.kind || (l.lang === 'xml' ? 'xml' : 'py'), quiz: l.quiz?.map((q) => q.answer) || null })));

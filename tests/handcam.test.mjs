@@ -20,6 +20,10 @@ await page.click('#hc-cam');
 await page.waitForFunction(() => /match the blue outline|put your hand/.test(document.querySelector('#hc-src').textContent), null, { timeout: 20000 });
 await page.waitForTimeout(500);
 check('outline is drawn after starting the camera', await blue() > 200, String(await blue()));
+const cx = () => page.evaluate(() => { const c = document.querySelector('#hc-overlay'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0, sx = 0; for (let i = 0; i < d.length; i += 4) { const y = Math.floor(i / 4 / c.width) / c.height; if (y > 0.55 && y < 0.8 && d[i + 3] > 0 && d[i + 2] > 200 && d[i] < 140) { n++; sx += (i / 4) % c.width; } } return n ? sx / n / c.width : -1; });
+const rightX = await cx(); await page.click('#hc-side'); await page.waitForTimeout(400); const leftX = await cx();
+check('the outline can be switched between right and left hand (it mirrors)', Math.abs((rightX + leftX) - 1) < 0.06 && Math.abs(rightX - leftX) > 0.03, `centre of outline: right ${rightX.toFixed(3)}, left ${leftX.toFixed(3)}`);
+await page.click('#hc-side'); await page.waitForTimeout(300);
 for (let round = 1; round <= 2; round++) {
   await page.click('#hc-track'); await page.waitForTimeout(400);
   check(`round ${round}: calibrated, outline hidden`, /tracking/.test(await page.textContent('#hc-src')) && await blue() < 60, `${await page.textContent('#hc-src')} blue=${await blue()}`);

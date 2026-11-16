@@ -1,8 +1,10 @@
 import { h, fill, state, bus, resetAll, ask, exportProgress, importProgress, toast } from '../util.js';
 import { TICKETS, activeTicket } from '../story.js';
+import { achievementsPanel } from '../rewards.js';
+import { COURSES } from '../course/lessons.js';
 import { LESSONS } from '../course/lessons.js';
 
-const summary = () => ({ name: state.name || null, lessons_done: Object.keys(state.course.done).filter((k) => state.course.done[k]).length, lessons_total: LESSONS.length,
+const summary = () => ({ name: state.name || null, xp: state.xp || 0, projects_submitted: Object.keys(state.projects || {}).length, lessons_done: Object.keys(state.course.done).filter((k) => state.course.done[k]).length, lessons_total: LESSONS.length,
   tickets_done: TICKETS.filter((t) => t.done()).map((t) => t.id), capstone_done: !!state.capstone?.done, policies: state.policies.length, evals: (state.evals || []).length, gpu_hours: state.gpuHours });
 
 export default {
@@ -23,6 +25,7 @@ export default {
             h('.st', {}, done ? 'Done' : isActive ? 'In progress' : 'To do'),
             !done && t.app !== 'tickets' ? h('button.small' + (isActive ? '' : '.ghost'), { onclick: () => openApp(t.app) }, 'Open') : null)];
         }),
+        achievementsPanel(COURSES),
         h('h3', { style: 'margin:26px 0 6px' }, 'Your progress'),
         h('p.dim', {}, 'Progress is saved in this browser only. Download a progress file to back it up or move to another computer.'),
         h('.row', {}, h('button.small#export-progress', { onclick: () => exportProgress(summary()) }, '⬇ Download progress file'),

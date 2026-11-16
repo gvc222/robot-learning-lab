@@ -33,7 +33,7 @@ const KEY = 'rll-state-v1', EP_KEY = 'rll-episodes-v1';
 const blank = () => ({
   name: '', tickets: {}, course: { done: {}, code: {} }, policies: [], evals: [],
   gpuHours: 0, opsHours: 0, chat: [], guideOff: false, seen: {}, capstone: { started: false, gpuAtStart: 0, done: false },
-  nextId: 1,
+  xp: 0, badges: {}, projects: {}, nextId: 1,
 });
 function load(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }

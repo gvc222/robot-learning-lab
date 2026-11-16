@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Robot Learning Lab — your first week as a robot learning researcher</title>
+<title>Boinkie’s Robot Lab: learn robot learning by doing</title>
 <meta name="description" content="A hands-on, beginner-friendly intro to robotics and robot learning. Write code, teleoperate a simulated arm in MuJoCo, clean data, train and evaluate policies.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦾</text></svg>">
 <link rel="stylesheet" href="css/style.css">
@@ -11,10 +11,12 @@
 </head>
 <body>
 <header id="topbar">
-  <div class="brand"><span class="logo">🦾</span> Tabletop Robotics <span class="dim">· LabOS</span></div>
+  <div class="brand"><span class="logo">🦾</span> Boinkie’s Robot Lab <span class="dim">· LabOS</span></div>
   <div class="spacer"></div>
   <div class="meter" title="GPU-hours you have spent on training"><span class="dim">GPU-h</span> <b id="m-gpu">0</b></div>
   <div class="meter" title="Hours of teleoperator time you have requested"><span class="dim">Operator-h</span> <b id="m-ops">0</b></div>
+  <div class="meter" id="xp-chip" title="Your level and XP: finish lessons to earn more" style="cursor:pointer"><span class="dim">⭐</span> <b id="m-xp">Lv 1 · 0 XP</b></div>
+  <button id="contact-btn" class="ghost" title="Find Gianna online">👋 Say hi</button>
   <button id="guide-toggle" class="ghost" title="Show or hide the step-by-step guide">Guide: on</button>
   <div id="clock" class="dim"></div>
 </header>

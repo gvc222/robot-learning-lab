@@ -12,6 +12,7 @@ import { LABS6 } from './labs6.js';
 import { LABS7 } from './labs7.js';
 import { LABS9 } from './labs9.js';
 import { LABS10 } from './labs10.js';
+import { lessonDone, submitProject } from '../rewards.js';
 import { EXPLAIN } from '../course/explain.js';
 import { FEEDBACK_URL, REPO_URL } from '../config.js';
 import { EditorView, basicSetup, keymap, EditorState, Compartment, indentWithTab, indentUnit, python, xml, oneDark } from '../../vendor/codemirror/cm.js';
@@ -243,8 +244,12 @@ export default {
     const sidePanel = h('.side.right', { style: 'width:360px' }, h('h3', {}, 'Lab bench'), panel);
 
     function pass() {
-      if (!state.course.done[lesson.id]) toast(`Lesson passed: ${lesson.title}`);
+      const first = !state.course.done[lesson.id];
       state.course.done[lesson.id] = true; save(); renderNav();
+      if (first) {
+        const course = COURSES.find((c) => c.id === lesson.course), inCourse = ORDERED.filter((l) => l.course === lesson.course);
+        lessonDone({ lesson, course, courseDone: inCourse.filter((l) => state.course.done[l.id]).length, courseTotal: inCourse.length, totalDone: ORDERED.filter((l) => state.course.done[l.id]).length, totalAll: ORDERED.length });
+      }
       nextBtn.hidden = !ORDERED[ORDERED.indexOf(lesson) + 1];
     }
     function renderNav() {
@@ -276,7 +281,24 @@ export default {
         term.textContent = k === 'xml' ? 'MJCF (MuJoCo XML). Press Run tests to compile and simulate it.' : 'Python output appears here. Ctrl/⌘ + Enter runs the tests.';
         fill(panel, l.viz ? h('p.dim', {}, 'Run your code to bring this panel to life.') : h('p.dim', {}, 'No visual for this one: the tests are the feedback.'));
       } else if (k === 'quiz') renderQuiz(l);
-      else if (k === 'read') fill(quizBox, h('button.ok#mark-read', { style: 'align-self:flex-start', onclick: () => { pass(); } }, '✓ Mark as done'));
+      else if (k === 'read') {
+        const isProject = l.id.startsWith('proj_'), saved = state.projects?.[l.id];
+        if (!isProject) fill(quizBox, h('button.ok#mark-read', { style: 'align-self:flex-start', onclick: () => { pass(); } }, '✓ Mark as done'));
+        else {
+          const url = h('input#proj-url', { type: 'url', placeholder: 'Link to your repo, video or write-up (https://…)', value: saved?.url || '', style: 'width:100%' }), note = h('textarea#proj-note', { rows: 4, style: 'width:100%', placeholder: 'What did you build? What worked, what broke, what would you do next?' }, saved?.note || '');
+          const save_ = (share) => {
+            const u = url.value.trim(), n = note.value.trim();
+            if (u && !/^https?:\/\//i.test(u)) { toast('The link should start with https://'); return false; }
+            if (!u && !n) { toast('Add a link or a few lines about what you built.'); return false; }
+            submitProject(l, { url: u, note: n }); pass(); toast('📬 Project saved to your portfolio.');
+            if (share) window.open(`${REPO_URL}/issues/new?title=${encodeURIComponent(`[project] ${l.title}`)}&labels=project&body=${encodeURIComponent(`**Project:** ${l.title}\n**Link:** ${u || '-'}\n\n${n}`)}`, '_blank', 'noopener');
+            return true;
+          };
+          fill(quizBox, h('.card', { style: 'display:grid;gap:8px' }, h('b', {}, '📬 Submit your project'),
+            h('p.dim', { style: 'font-size:12.5px;margin:0' }, 'Optional. Saved in this browser and in your progress file, and collected in your portfolio (Tickets → Your progress). Nothing is sent anywhere unless you press “Share with Boinkie”, which opens a GitHub issue that you can review before posting.'),
+            url, note, h('.row', {}, h('button.ok#proj-save', { onclick: () => save_(false) }, saved ? 'Update submission' : 'Save project'), h('button.ghost#proj-share', { onclick: () => save_(true) }, 'Save & share with Boinkie'), h('button.ghost#mark-read', { onclick: () => pass() }, 'Just mark as done'))));
+        }
+      }
       else if (k === 'lab') {
         fill(panel);
         Promise.resolve(LABS[l.viz]({ panel, done: () => { if (lesson === l) pass(); } })).then((r) => { labCleanup = r?.cleanup || null; });

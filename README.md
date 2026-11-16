@@ -2,7 +2,7 @@
 
 **A hands-on, beginner-friendly introduction to robotics and robot learning, played as your first week on the job at a robotics lab.**
 
-You don't read about robot learning here. You badge in to *Tabletop Robotics*, get a board of tickets from your research lead, and do the work: write a little robot code, teleoperate an arm to collect demonstrations, clean a messy dataset by watching every episode, train a policy, and prove it on an evaluation workbench. Then you ship one on your own, against real constraints.
+You don't read about robot learning here. You badge in to *Boinkie’s Robot Lab*, get a board of tickets from your research lead, and do the work: write a little robot code, teleoperate an arm to collect demonstrations, clean a messy dataset by watching every episode, train a policy, and prove it on an evaluation workbench. Then you ship one on your own, against real constraints.
 
 Everything runs in the browser. No install, no account, no backend.
 
@@ -61,6 +61,8 @@ Orange sticky notes from your lead (the guide popups) walk you through each tick
 | **Reinforcement learning, humanoid** | Design a reward for a MuJoCo humanoid and watch random search train a standing policy on it; a speed-only reward makes it lunge and fall. |
 | **Computer vision (CS231n companion)** | Convolution, kNN, a softmax classifier with a numerical gradient check, a tiny autograd, CNN size/parameter/receptive-field arithmetic, IoU and non-maximum suppression, with a roadmap to the real course. |
 | **A project per course** | Optional "Project" lessons with real commands for building outside the browser: PD control in MuJoCo, a randomized scene factory, Isaac Lab or Gym humanoid training, recording a LeRobot dataset, training ACT on your SO-101, a digital twin, a deployment harness, SLAM with Nav2, a ROS 2 pick pipeline, Diffusion Policy on PushT. |
+
+Learners earn **XP, levels and course badges** with congratulations from Boinkie (confetti on course completion), and each project lesson has a **Submit your project** form (a link and a few notes) that builds a downloadable markdown portfolio. Submissions stay in the browser unless you choose “Save & share”, which opens a prefilled GitHub issue.
 
 Lessons also have **live knobs**: drag a constant from your code (a gain, a noise level, a smoothing factor) and the lab bench re-runs.
 
@@ -170,3 +172,14 @@ npm run test:e2e          # whole flow in headless Chrome via Playwright: every 
 Physics by [MuJoCo](https://github.com/google-deepmind/mujoco) (Google DeepMind, Apache-2.0). Rendering with [three.js](https://threejs.org) (MIT). Python by [Pyodide](https://pyodide.org) (MPL-2.0). Robot models from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie) (SO-101 by TheRobotStudio, Apache-2.0; I2RT YAM, MIT; LEAP Hand, MIT). Hand tracking by [MediaPipe](https://github.com/google-ai-edge/mediapipe) (Apache-2.0). Grasp types from Feix et al., *The GRASP Taxonomy of Human Grasp Types*, IEEE THMS 2016. SO-101 build and calibration content follows the [LeRobot SO-101 guide](https://huggingface.co/docs/lerobot/so101) and [SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100). Paper summaries link to their sources on arXiv. The model families referenced (ACT, Diffusion Policy, VQ-BeT, SmolVLA, π0, π0-FAST, π0.5, GR00T, Fast-WAM) and tools (DreamGen, UVA, FLORA) belong to their authors; this project is not affiliated with them and does not run those models.
 
 MIT licensed. See [LICENSE](LICENSE).
+
+## Find the author
+
+Questions, bugs, ideas, or something you built with the lab? Say hi (there is also a **👋 Say hi** button in the app):
+
+- Website: [playtimediary.com](https://playtimediary.com)
+- GitHub: [gvc222](https://github.com/gvc222)
+- LinkedIn: [giannacalderon](https://www.linkedin.com/in/giannacalderon)
+- Discord: `boinkie`
+
+Contact details live in `js/config.js` (`CONTACT`).
