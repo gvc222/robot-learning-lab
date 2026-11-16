@@ -3,6 +3,7 @@ import { MORE3, COURSES3 } from './lessons3.js';
 import { CONTROL_INTRO, CONTROL_MORE } from './lessons4.js';
 import { MORE5, COURSES5 } from './lessons5.js';
 import { MORE6 } from './lessons6.js';
+import { MORE7, COURSES7 } from './lessons7.js';
 // Academy curriculum. Each lesson: explanation, starter code, a reference solution, and tests.
 // Python lessons run in Pyodide (CPython compiled to WebAssembly); tests are plain asserts.
 // `pre` runs before the learner's code. `viz` names a visualisation in apps/academy.js.
@@ -10,6 +11,7 @@ import { MORE6 } from './lessons6.js';
 export const COURSES = [
   { id: 'basics', title: 'Robot basics & control', blurb: 'Real robots, joint angles, kinematics, then control loops from P to a whole arm.' },
   { id: 'sim', title: 'Simulation & sim-to-real', blurb: 'Build MuJoCo worlds, script a pick, survive the reality gap.' },
+  ...COURSES7,
   { id: 'rl', title: 'Reinforcement learning', blurb: 'Rewards, Q-learning, random search and reward models.' },
   { id: 'data', title: 'Data, language & human video', blurb: 'Subtasks, captions, egocentric pretraining, eval statistics, LeRobot export.' },
   { id: 'hardware', title: 'Build an SO-101', blurb: 'From a box of parts to a calibrated arm with cameras.' },
@@ -91,7 +93,7 @@ export const LESSONS = [
   },
   ...CONTROL_INTRO,
   {
-    id: 'pcontrol', unit: 1, course: 'basics', title: 'P control: one joint', viz: 'pcontrol', explain: 'presp',
+    id: 'pcontrol', unit: 1, course: 'basics', title: 'P control: one joint', viz: 'pcontrol', explain: 'presp', knobs: [{ name: 'KP', min: 0, max: 60, step: 0.5 }],
     text: `<p>Knowing the angle you want is not the same as being there. A <b>controller</b> runs many times per second: measure where the joint is, compare with where it should be, push accordingly.</p>
 <p>The simplest one is <b>proportional (P) control</b>: push in proportion to the error.</p><p class="mono">command = kp × (target − current)</p>
 <p><b>Two spellings, on purpose</b>: lowercase <code>kp</code> is the <i>parameter</i> inside your function (a local name; the function works for any gain). Capital <code>KP</code> is the <i>constant</i> you choose at the bottom, the actual gain value the tests pass in as <code>p_control(q, target, KP)</code>. Python treats <code>KP</code> and <code>kp</code> as two unrelated names, and the capitals are only a convention for “a setting at the top of the file”.</p>
@@ -212,6 +214,7 @@ def _greedy_path(Q):
   ...MORE3,
   ...MORE5,
   ...MORE6,
+  ...MORE7,
 ];
 
 // Slot the newer lessons where they teach best (the arrays above are in the order they were written).

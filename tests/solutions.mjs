@@ -13,7 +13,7 @@ for (const l of lessons.filter((x) => !only.length || only.includes(x.id))) {
     [...document.querySelectorAll('.lesson-nav button')].find((b) => b.textContent.includes(x.title)).click();
     lab.setCode(x.solution);
   }, l.id);
-  await page.click('#run-tests');
+  await page.click('#run-tests', { timeout: 280000 });
   await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 240000 });
   const passed = await page.evaluate((id) => !!lab.state.course.done[id], l.id);
   const why = passed ? '' : await page.evaluate(() => [...document.querySelectorAll('.test.fail')].map((n) => n.textContent.trim().slice(0, 160)).join(' | '));

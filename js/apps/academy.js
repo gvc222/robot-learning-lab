@@ -9,6 +9,7 @@ import { LABS3 } from './labs3.js';
 import { LABS4 } from './labs4.js';
 import { LABS5 } from './labs5.js';
 import { LABS6 } from './labs6.js';
+import { LABS7 } from './labs7.js';
 import { EXPLAIN } from '../course/explain.js';
 import { FEEDBACK_URL, REPO_URL } from '../config.js';
 import { EditorView, basicSetup, keymap, EditorState, Compartment, indentWithTab, indentUnit, python, xml, oneDark } from '../../vendor/codemirror/cm.js';
@@ -172,6 +173,7 @@ const LABS = {
   ...LABS4,
   ...LABS5,
   ...LABS6,
+  ...LABS7,
 };
 
 
@@ -244,7 +246,7 @@ export default {
         const ls = ORDERED.filter((l) => l.course === c.id), n = ls.filter((l) => state.course.done[l.id]).length, isOpen = open_[c.id];
         return [h('button.unit', { style: 'background:none;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:8px 8px 3px;text-align:left;width:100%;font-weight:600', onclick: () => { open_[c.id] = !isOpen; save(); renderNav(); } },
           `${isOpen ? '▾' : '▸'} ${c.title} `, h('span', { style: `font-weight:400;${n === ls.length ? 'color:var(--good)' : ''}` }, `${n}/${ls.length}`)),
-        ...(isOpen ? ls.map((l) => h('button' + (l === lesson ? '.sel' : ''), { onclick: () => open(l) }, h('span', { class: state.course.done[l.id] ? 'good' : 'dim' }, state.course.done[l.id] ? '✓ ' : kindOf(l) === 'quiz' ? '? ' : kindOf(l) === 'lab' ? '⚙ ' : '○ '), l.title)) : [])];
+        ...(isOpen ? ls.map((l) => h('button' + (l === lesson ? '.sel' : ''), { onclick: () => open(l) }, h('span', { class: state.course.done[l.id] ? 'good' : 'dim' }, state.course.done[l.id] ? '✓ ' : kindOf(l) === 'quiz' ? '? ' : kindOf(l) === 'lab' ? '⚙ ' : kindOf(l) === 'read' ? '📖 ' : '○ '), l.title)) : [])];
       }),
       !state.tickets['ROB-2'] ? h('p', { style: 'margin:14px 8px' }, h('button.small.ghost', { onclick: () => { state.seen.skipBasics = true; save(); toast('Robot basics skipped. The lessons stay here if you want them later.'); } }, 'I know this: skip Robot basics')) : '');
     }
@@ -260,14 +262,15 @@ export default {
       const k = kindOf(l);
       editor.hidden = codeRow.hidden = term.hidden = !(k === 'py' || k === 'xml');
       hintBtn.hidden = resetBtn.hidden = solBtn.hidden = false;
-      quizBox.hidden = k !== 'quiz';
-      sidePanel.hidden = k === 'quiz';
+      quizBox.hidden = k !== 'quiz' && k !== 'read';
+      sidePanel.hidden = k === 'quiz' || k === 'read';
       fill(results); nextBtn.hidden = true;
       if (k === 'py' || k === 'xml') {
         editor.setLang(k); editor.value = state.course.code[l.id] ?? l.starter;
         term.textContent = k === 'xml' ? 'MJCF (MuJoCo XML). Press Run tests to compile and simulate it.' : 'Python output appears here. Ctrl/⌘ + Enter runs the tests.';
         fill(panel, l.viz ? h('p.dim', {}, 'Run your code to bring this panel to life.') : h('p.dim', {}, 'No visual for this one: the tests are the feedback.'));
       } else if (k === 'quiz') renderQuiz(l);
+      else if (k === 'read') fill(quizBox, h('button.ok#mark-read', { style: 'align-self:flex-start', onclick: () => { pass(); } }, '✓ Mark as done'));
       else if (k === 'lab') {
         fill(panel);
         Promise.resolve(LABS[l.viz]({ panel, done: () => { if (lesson === l) pass(); } })).then((r) => { labCleanup = r?.cleanup || null; });
@@ -312,14 +315,31 @@ export default {
           // The lab bench always shows up. It uses your code; if your code cannot run, it shows the reference solution instead (and never counts that towards passing).
           let refNs = null;
           if (py && lesson.solution && lesson.lang !== 'xml') { try { refNs = py.globals.get('dict')(); if (lesson.pre) py.runPython(lesson.pre, { globals: refNs }); py.runPython(lesson.solution, { globals: refNs }); } catch { refNs = null; } }
-          const call = (n, r) => LABS[lesson.viz]({ panel, ns: n, py, code, pyOk: true, ref: r });
-          let lab = null, usedRef = false;
-          try { if (!pyOk) throw new Error('your code did not run'); lab = await call(ns, refNs); }
-          catch (e) { fill(panel); if (refNs) { try { lab = await call(refNs, null); usedRef = true; } catch { /* nothing to show */ } } }
-          if (!alive) lab?.cleanup?.(); else labCleanup = lab?.cleanup || null;
-          if (usedRef) panel.prepend(h('p.bad', { style: 'font-size:12.5px' }, 'Your code could not drive this lab yet, so this is the reference solution running, to show what the goal looks like. Fix the errors above and run again.'));
-          else if (!pyPassed && lesson.lang !== 'xml') panel.prepend(h('p.dim', { style: 'font-size:12.5px' }, 'Some tests are failing: this is what your code does right now.'));
+          const labBox = h('div'), knobRow = h('div', { style: 'margin-bottom:6px' });
+          fill(panel, knobRow, labBox);
+          let usedRef = false;
+          const runLab = async (first) => {
+            labCleanup?.(); labCleanup = null; fill(labBox);
+            const call = (n, r) => LABS[lesson.viz]({ panel: labBox, ns: n, py, code, pyOk: true, ref: r });
+            let lab = null; usedRef = false;
+            try { if (!pyOk) throw new Error('your code did not run'); lab = await call(ns, refNs); }
+            catch (e) { fill(labBox); if (refNs) { try { lab = await call(refNs, null); usedRef = true; } catch { /* nothing to show */ } } }
+            if (!alive) lab?.cleanup?.(); else labCleanup = lab?.cleanup || null;
+            if (usedRef) labBox.prepend(h('p.bad', { style: 'font-size:12.5px' }, 'Your code could not drive this lab yet, so this is the reference solution running, to show what the goal looks like. Fix the errors above and run again.'));
+            else if (first && !pyPassed && lesson.lang !== 'xml') labBox.prepend(h('p.dim', { style: 'font-size:12.5px' }, 'Some tests are failing: this is what your code does right now.'));
+            return lab;
+          };
+          const lab = await runLab(true);
           if (!usedRef) for (const t of lab?.tests || []) rows.push(t);
+          // Live knobs: drag a constant from your code and watch the lab bench change (the code in the editor is not touched).
+          if (lesson.knobs && ns && pyOk) {
+            let timer = null;
+            knobRow.append(h('.dim', { style: 'font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px' }, '🎛 Live knobs (try values here, then put your favourite in the code)'),
+              ...lesson.knobs.map((k) => { let cur = Number(ns.get(k.name)); if (!Number.isFinite(cur)) cur = k.min;
+                const out = h('b.mono', { style: 'min-width:48px;text-align:right' }, cur.toFixed(k.step < 0.01 ? 3 : 2));
+                const inp = h('input', { type: 'range', min: k.min, max: k.max, step: k.step, value: cur, style: 'flex:1', oninput: (e) => { const v = +e.target.value; out.textContent = v.toFixed(k.step < 0.01 ? 3 : 2); ns.set(k.name, v); clearTimeout(timer); timer = setTimeout(() => runLab(false), 250); } });
+                return h('label.row', { style: 'gap:8px;align-items:center;font-size:12.5px;margin:2px 0' }, h('span', { style: 'min-width:70px' }, k.name), inp, out); }));
+          }
         }
       } catch (e) { rows.push(['lab ran', false, String(e.message || e)]); }
       term.textContent = out.join('\n') || (lesson.lang === 'xml' ? 'compiled with MuJoCo.' : '(no output)');
