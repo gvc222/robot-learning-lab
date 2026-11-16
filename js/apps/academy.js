@@ -10,6 +10,7 @@ import { LABS4 } from './labs4.js';
 import { LABS5 } from './labs5.js';
 import { LABS6 } from './labs6.js';
 import { LABS7 } from './labs7.js';
+import { LABS9 } from './labs9.js';
 import { EXPLAIN } from '../course/explain.js';
 import { FEEDBACK_URL, REPO_URL } from '../config.js';
 import { EditorView, basicSetup, keymap, EditorState, Compartment, indentWithTab, indentUnit, python, xml, oneDark } from '../../vendor/codemirror/cm.js';
@@ -174,6 +175,7 @@ const LABS = {
   ...LABS5,
   ...LABS6,
   ...LABS7,
+  ...LABS9,
 };
 
 

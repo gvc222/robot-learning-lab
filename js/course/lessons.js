@@ -4,6 +4,8 @@ import { CONTROL_INTRO, CONTROL_MORE } from './lessons4.js';
 import { MORE5, COURSES5 } from './lessons5.js';
 import { MORE6 } from './lessons6.js';
 import { MORE7, COURSES7 } from './lessons7.js';
+import { MORE8 } from './lessons8.js';
+import { MORE9, COURSES9 } from './lessons9.js';
 // Academy curriculum. Each lesson: explanation, starter code, a reference solution, and tests.
 // Python lessons run in Pyodide (CPython compiled to WebAssembly); tests are plain asserts.
 // `pre` runs before the learner's code. `viz` names a visualisation in apps/academy.js.
@@ -17,6 +19,7 @@ export const COURSES = [
   { id: 'hardware', title: 'Build an SO-101', blurb: 'From a box of parts to a calibrated arm with cameras.' },
   ...COURSES3,
   ...COURSES5,
+  ...COURSES9,
   { id: 'corl', title: '🧪 Sandbox: CoRL 2026 Review Club', blurb: 'Exploratory: the award finalists and other landmark papers, reviewed hands-on.' },
 ];
 const UNIT_COURSE = { 1: 'basics', 2: 'sim', 3: 'rl' };
@@ -215,6 +218,8 @@ def _greedy_path(Q):
   ...MORE5,
   ...MORE6,
   ...MORE7,
+  ...MORE9,
+  ...MORE8,
 ];
 
 // Slot the newer lessons where they teach best (the arrays above are in the order they were written).
