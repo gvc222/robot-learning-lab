@@ -1,5 +1,5 @@
 // Academy: read, write code, run tests. Python runs locally in Pyodide; MuJoCo lessons use the real engine.
-import { h, fill, $, state, save, bus, toast, lineChart } from '../util.js';
+import { h, fill, $, state, save, bus, toast, lineChart, ask } from '../util.js';
 import { LESSONS, UNITS } from '../course/lessons.js';
 import { Sim, loadMujoco, CONTROL_DT } from '../sim/sim.js';
 import { Viewer } from '../sim/viewer.js';
@@ -219,8 +219,8 @@ export default {
       h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, title, text, editor,
         h('.row', {}, runBtn, nextBtn,
           h('button.ghost', { onclick: () => { fill(results, h('.card', { html: '💡 ' + lesson.hint })); } }, 'Hint'),
-          h('button.ghost', { onclick: () => { if (confirm('Replace your code with the starter?')) { editor.value = lesson.starter; delete state.course.code[lesson.id]; save(); } } }, 'Reset'),
-          h('button.ghost', { onclick: () => { if (confirm('Show the reference solution? Try the hint first.')) { editor.value = lesson.solution; state.course.code[lesson.id] = lesson.solution; save(); } } }, 'Solution')),
+          h('button.ghost', { onclick: async () => { if (await ask('Replace your code with the starter?', 'Reset')) { editor.value = lesson.starter; delete state.course.code[lesson.id]; save(); } } }, 'Reset'),
+          h('button.ghost', { onclick: async () => { if (await ask('Show the reference solution? Try the hint first.', 'Show it')) { editor.value = lesson.solution; state.course.code[lesson.id] = lesson.solution; save(); } } }, 'Solution')),
         results, term),
       h('.side.right', { style: 'width:350px' }, h('h3', {}, 'Lab bench'), panel)));
     open(lesson);

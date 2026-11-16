@@ -1,4 +1,4 @@
-import { h, fill, state, bus, resetAll } from '../util.js';
+import { h, fill, state, bus, resetAll, ask } from '../util.js';
 import { TICKETS, activeTicket } from '../story.js';
 
 export default {
@@ -18,7 +18,7 @@ export default {
             h('.st', {}, done ? 'Done' : isActive ? 'In progress' : 'To do'),
             !done && t.app !== 'tickets' ? h('button.small' + (isActive ? '' : '.ghost'), { onclick: () => openApp(t.app) }, 'Open') : null);
         }),
-        h('p.dim', { style: 'margin-top:24px' }, 'Want a clean slate? ', h('button.small.ghost', { onclick: () => confirm('Erase all progress, demos and policies in this browser?') && resetAll() }, 'Reset the lab'))));
+        h('p.dim', { style: 'margin-top:24px' }, 'Want a clean slate? ', h('button.small.ghost', { onclick: async () => (await ask('Erase all progress, demos and policies in this browser?', 'Erase everything')) && resetAll() }, 'Reset the lab'))));
     };
     render();
     return bus.on('change', render);

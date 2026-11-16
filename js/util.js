@@ -81,3 +81,12 @@ export function lineChart(canvas, series, { ymin = null, ymax = null, upto = 1 }
     c.stroke();
   }
 }
+
+// In-page confirm dialog (window.confirm is blocked in some embedded viewers).
+export function ask(text, okLabel = 'Yes') {
+  return new Promise((res) => {
+    const m = $('#modal'), close = (v) => { m.hidden = true; res(v); };
+    fill(m, h('.box', { style: 'max-width:380px' }, h('p', {}, text), h('.row', {}, h('button', { onclick: () => close(true) }, okLabel), h('button.ghost', { onclick: () => close(false) }, 'Cancel'))));
+    m.hidden = false;
+  });
+}
