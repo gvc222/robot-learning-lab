@@ -29,7 +29,7 @@ function render() {
   const s = steps()[step];
   if (state.guideOff || !s || !$('#modal').hidden) { el.hidden = true; return; }
   const here = currentApp() === s.app;
-  const target = here ? $(s.sel) : $(`#dock [data-app="${s.app}"]`);
+  const target = here ? $(s.sel) : $(`#dock [data-app="${s.app}"]`) || $('#dock [data-app="sandbox"]');
   if (!target || target.offsetParent === null) { el.hidden = true; return; }
   const text = here ? s.text : `Next up: open <b>${target.dataset.title}</b>.`;
   const key = `${ticketId}:${step}:${here}`;

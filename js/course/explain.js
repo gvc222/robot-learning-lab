@@ -90,6 +90,7 @@ function robot3d(box) {
       const adr = m.jnt_qposadr[j], lim = m.jnt_limited ? m.jnt_limited[j] : 1;
       let [lo, hi] = [m.jnt_range[2 * j], m.jnt_range[2 * j + 1]]; if (!lim || lo === hi) [lo, hi] = type === 3 ? [-Math.PI, Math.PI] : [-0.1, 0.1];
       const hinge = type === 3, k = hinge ? 1 / D : 1000;
+      d.qpos[adr] = lo <= 0 && hi >= 0 ? 0 : (lo + hi) / 2;  // neutral start: zero if allowed, else mid-range
       rows.push(slider(nameOf(mj, m, 'mjOBJ_JOINT', j) || `joint ${j}`, { min: lo * k, max: hi * k, step: hinge ? 1 : 0.5, value: d.qpos[adr] * k, fmt: (v) => (hinge ? `${v.toFixed(0)}°` : `${v.toFixed(1)} mm`), on: (v) => { d.qpos[adr] = v / k; mj.mj_forward(m, d); upd(); } })[0]);
     }
     fill(sliders, rows.length ? rows : note('This model has no hinge or slide joints.'));
@@ -125,9 +126,9 @@ function robot3d(box) {
 const PRESETS = { so101: 'SO-101 (real lengths)', yam: 'YAM (real lengths)', custom: 'Custom arm (add links)' };
 function armfk(box) {
   let alive = true, raf, preset = 'so101', rb = null, chain = null, viewer = null;
-  let L = [0.116, 0.135], th = [60 * D, -70 * D];
+  let L = [0.116, 0.135], th = [0, 0];
   const sel = h('select', { onchange: (e) => setPreset(e.target.value) }, Object.entries(PRESETS).map(([k, v]) => h('option', { value: k }, v)));
-  const addB = h('button.small.ghost', { onclick: () => { if (L.length < 5) { L.push(0.08); th.push(20 * D); build(); } } }, '+ link');
+  const addB = h('button.small.ghost', { onclick: () => { if (L.length < 5) { L.push(0.08); th.push(0); build(); } } }, '+ link');
   const rmB = h('button.small.ghost', { onclick: () => { if (L.length > 1) { L.pop(); th.pop(); build(); } } }, '− link');
   const [c, g] = cv(360, 250), view = h('.view3d', { style: 'height:250px;flex:1;min-width:200px;border-radius:8px;overflow:hidden' });
   const sl = h('div'), formula = h('pre.mono', { style: 'font-size:12px;white-space:pre-wrap;margin:6px 0 0' });
@@ -136,11 +137,11 @@ function armfk(box) {
     note('θ₁ is measured from the table (horizontal). Every later θ is measured from the previous link (the dashed line), so a link’s direction is the running sum θ₁ + θ₂ + …. The 3D robot gets the exact same angles, converted to its own joint commands.')));
   async function setPreset(p) {
     preset = p; addB.hidden = rmB.hidden = p !== 'custom';
-    if (p === 'custom') { viewer?.dispose(); viewer = null; view.hidden = true; L = [0.12, 0.1, 0.07]; th = [50 * D, -40 * D, -30 * D]; build(); return; }
+    if (p === 'custom') { viewer?.dispose(); viewer = null; view.hidden = true; L = [0.12, 0.1, 0.07]; th = [0, 0, 0]; build(); return; }
     view.hidden = false;
     if (!loaded[p]) loaded[p] = loadRobot(p);
     rb = await loaded[p]; if (!alive || preset !== p) return;
-    chain = planarChain(rb); L = chain.L.slice(); th = chain.offset.map((o, i) => o + chain.sign[i] * rb.r.q0[i]);
+    chain = planarChain(rb); L = chain.L.slice(); th = chain.offset.map((o, i) => { const [lo, hi] = chain.thetaRange(i); return lo <= 0 && hi >= 0 ? 0 : (lo + hi) / 2; });
     viewer?.dispose(); viewer = new Viewer(view, { cam: rb.r.cam, look: rb.r.look, groups: rb.r.groups, minDist: 0.15, maxDist: 3 }); viewer.setSim(rb);
     build();
   }

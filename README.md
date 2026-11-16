@@ -31,7 +31,7 @@ Everything runs in the browser. No install, no account, no backend.
 | ROB-11 | **Academy**: Data, language & human video | Write a subtask segmenter, what language buys (DeMiAn), egocentric pretraining (EgoMimic, HumanScale), Wilson intervals and how many trials an eval needs, LeRobotDataset export. |
 | ROB-12 | **Eval** | Sim-to-real: change friction and mass in MuJoCo, or flip on a "real robot" with hidden calibration error and latency. Compare policies trained with and without domain randomization. Every run shows 95% intervals and a paired McNemar test. |
 | ROB-13 | **Academy**: Build an SO-101 | The open-source LeRobot arm: kit and gear ratios, a virtual `lerobot-setup-motors` bench, assembly and wrist cameras, arm calibration (LeRobot's exact normalization), camera intrinsics and extrinsics checked against MuJoCo's real cameras. |
-| ROB-14 | **Academy**: CoRL 2026 Review Club | The six CoRL 2026 award finalists (SuperMimic won Best Paper; also the benchmark audit, RoboTTT, Play2Perfect, GRAIL, DISCO) plus Diffusion Policy and FLORA. Each has a paper summary with its real numbers and a code check or reviewer quiz. |
+| ROB-14 | **Sandbox → Academy**: CoRL 2026 Review Club | The six CoRL 2026 award finalists (SuperMimic won Best Paper; also the benchmark audit, RoboTTT, Play2Perfect, GRAIL, DISCO) plus Diffusion Policy and FLORA. Each has a paper summary with its real numbers and a code check or reviewer quiz. |
 | ROB-15 | **Dataset** | Export kept episodes as a zip plus `convert_to_lerobot.py`, which rebuilds them as a real `LeRobotDataset` (v3 API) to train with LeRobot or push to the Hub. |
 
 ### Week 3: twins, deployment, mobile robots, hands
@@ -41,8 +41,8 @@ Everything runs in the browser. No install, no account, no backend.
 | ROB-16 | **Academy**: Digital twins | Scan (photogrammetry with COLMAP/Meshroom) or CAD (Tinkercad, Onshape, FreeCAD) a real object; fix units, holes and volume; mass and inertia into MJCF; measure friction with a tilting board that really runs in MuJoCo; visual vs collision meshes and system identification. |
 | ROB-17 | **Academy**: Deployment, the coffee shift | A long-horizon cafe task in MuJoCo (cup → machine → brew → tray) with cups that really slip: write a shift that checks and regrasps (at a 35% slip rate, a script without checks serves only a few of 20 orders), blend between skills with minimum-jerk superposition, and sort real shift logs into clean / recovered / failed / bad. Points to the real ViFailback failure dataset. |
 | ROB-18 | **Academy**: Mobile robots & delivery | Locomotion and the automotive autonomy stack, differential drive, the kinematic bicycle model, a Kalman filter fusing slipping odometry with GPS, occupancy-grid mapping from MuJoCo ray-cast lidar, A*, and a capstone where your pure-pursuit controller drives a wheeled robot (real wheel contacts) on three food deliveries. Mapping and localization are taught inside the course rather than as a separate SLAM prerequisite. |
-| ROB-19 | **Hand Cam** | Webcam teleop of a dexterous hand: MediaPipe tracks 21 landmarks in the browser, they are retargeted onto MuJoCo Menagerie's 16-joint LEAP Hand, and a detector labels your grasp with its top-3 Feix GRASP taxonomy types (33 types). Log grasps with their landmarks. |
-| ROB-20 | **Leader Arm** (optional) | Plug a real SO-101 leader arm into the laptop. Chrome/Edge talk to the Feetech STS3215 servos over the Web Serial API (1 Mbaud, torque off, READ of Present_Position at register 56), map them with your `lerobot-calibrate` file the way LeRobot's degrees mode does, and drive a simulated SO-101 (MuJoCo Menagerie). Record 30 Hz episodes. No arm? Sliders. |
+| ROB-19 | **Sandbox → Hand Cam** | Webcam teleop of a dexterous hand: MediaPipe tracks 21 landmarks in the browser, they are retargeted onto MuJoCo Menagerie's 16-joint LEAP Hand, and a detector labels your grasp with its top-3 Feix GRASP taxonomy types (33 types). Log grasps with their landmarks. |
+| ROB-20 | **Sandbox → Leader Arm** (optional) | Plug a real SO-101 leader arm into the laptop. Chrome/Edge talk to the Feetech STS3215 servos over the Web Serial API (1 Mbaud, torque off, READ of Present_Position at register 56), map them with your `lerobot-calibrate` file the way LeRobot's degrees mode does, and drive a simulated SO-101 (MuJoCo Menagerie). Record 30 Hz episodes. No arm? Sliders. |
 
 Orange sticky notes from your lead (the guide popups) walk you through each ticket step by step.
 
@@ -50,7 +50,7 @@ Orange sticky notes from your lead (the guide popups) walk you through each tick
 
 | Ticket | App | What you learn |
 | --- | --- | --- |
-| ROB-21 | **Academy**: Perception, planning & ROS 2 | Back-project a depth image (ray-cast from MuJoCo's camera) into a point cloud and locate a cube; the Jacobian and damped-least-squares IK tracking a moving target; RRT motion planning around obstacles; ROS 2 concepts, then two nodes written against a small `rclpy`-shaped stand-in. |
+| ROB-21 | **Academy**: Perception, planning & ROS 2 | 3D rotation matrices and rigid-body transforms; back-project a depth image (ray-cast from MuJoCo's camera) into a point cloud and locate a cube; the Jacobian and damped-least-squares IK tracking a moving target; RRT motion planning around obstacles; ROS 2 concepts, then two nodes written against a small `rclpy`-shaped stand-in. |
 | ROB-22 | **Academy**: Train real policies | Behaviour cloning with a real neural network trained in the browser on MuJoCo demos (success on new layouts goes roughly 0/20 → 15/20 → 20/20 with 10, 20 and 40 demos); flow matching on a two-mode action distribution; a MuJoCo quadruped whose trot gait you write and improve with random search. |
 
 Progress lives in the browser; **Tickets → Your progress** downloads or loads a progress file. Every lesson has a feedback button that posts to a Google Sheet once you set `FEEDBACK_URL` ([setup](docs/feedback-sheet.md)), or opens a pre-filled GitHub issue otherwise.
@@ -119,9 +119,9 @@ js/config.js          feedback endpoint and repo URL
 js/hw/feetech.js      Feetech STS3215 protocol over Web Serial (the SO-101 servos)
 js/hand/grasp.js      hand landmarks → features → Feix-33 grasp type; LEAP Hand retargeting
 js/course/explain.js  interactive explainers shown before each lesson's code (sliders, live MuJoCo)
-js/course/lessons*.js Academy curriculum: 11 courses, 64 lessons (code, quiz or lab)  ← add lessons here
-js/apps/labs2-5.js    interactive lab benches for the newer lessons
-js/apps/*.js          one file per app (Academy, Teleop, Leader Arm, Hand Cam, Dataset, World Models, Train, Eval, Capstone, Tickets)
+js/course/lessons*.js Academy curriculum: 11 courses, 68 lessons (code, quiz or lab)  ← add lessons here
+js/apps/labs2-6.js    interactive lab benches for the newer lessons
+js/apps/*.js          one file per app (Academy, Teleop, Sandbox (Leader Arm, Hand Cam), Dataset, World Models, Train, Eval, Capstone, Tickets)
 vendor/               MuJoCo WASM, three.js, Pyodide, MediaPipe, Menagerie models (checked in; see vendor/README.md)
 tests/                headless checks (below)
 ```

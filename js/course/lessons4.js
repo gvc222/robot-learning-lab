@@ -23,6 +23,8 @@ export const CONTROL_MORE = [
 <p>Add a term that pushes against the speed, a shock absorber:</p>
 <p class="mono">τ = kp·(target − q) − kd·q̇</p>
 <p>That is <b>PD control</b>. The damping ratio ζ = kd / (2·√(kp·I)) says it all: ζ &lt; 1 overshoots, ζ = 1 (critical damping) arrives fastest with no overshoot, ζ &gt; 1 crawls. Try it in the widget.</p>
+<p><b>What is q̇?</b> The dot means “rate of change”: <code>q</code> is the joint angle, <code>q̇</code> (<code>qd</code> in code) is how fast it is changing, the joint’s <b>velocity</b> in rad/s. Robotics calls the set of all joint variables the <i>generalized coordinates</i> and their rates the <i>generalized velocities</i>: “generalized” because it covers hinge joints (radians, rad/s) and sliding joints (metres, m/s) with one symbol. <code>q̈</code> (two dots) is acceleration.</p>
+<div class="card" style="margin:8px 0"><b>Already defined for you</b>: <code>math</code> and <code>I = 0.01</code> (the joint’s inertia). <b>You write</b> <code>pd_torque(q, qd, q_target, kp, kd)</code> (returns one torque) and set the two constants <code>KP</code> and <code>KD</code>.</div>
 <p><b>Your task</b>: write <code>pd_torque(q, qd, q_target, kp, kd)</code>, then choose <code>KP</code> and <code>KD</code> for a joint with inertia I = 0.01 kg·m² so it moves 1 rad with under 5% overshoot and settles within 2% in 0.6 s. The lab runs your controller on a real MuJoCo joint.</p>`,
     pre: 'import math\nI = 0.01\n',
     starter: `def pd_torque(q, qd, q_target, kp, kd):
@@ -49,6 +51,10 @@ KD = 2 * math.sqrt(KP * I)
 <p>Two fixes, and real arms use both:</p>
 <ul><li><b>Integral term</b>: keep a running sum of the error and push with <code>ki·∫e dt</code>. Any lasting error keeps growing the push until the error is gone. That is <b>PID</b>. Watch for <i>windup</i>: if the motor is saturated the sum keeps growing and later overshoots, so real code clamps it.</li>
 <li><b>Feed-forward</b>: you know the physics, so add the gravity torque directly: <code>τ += m·g·l<sub>c</sub>·cos q</code>. The feedback terms then only handle what the model gets wrong.</li></ul>
+<p><b>Quick review of the three terms</b> (e = target − q is the error):</p>
+<ul><li><b>P</b>, <code>kp·e</code>: push in proportion to the error <i>now</i>. Fast, but stalls when the push equals a steady load like gravity.</li><li><b>I</b>, <code>ki·∫e dt</code>: push in proportion to the error <i>accumulated over time</i> (the running sum of e·dt). It remembers the past, so a lasting error eventually wins.</li><li><b>D</b>, <code>kd·ė</code>: push against how fast the error is changing, the shock absorber. With a fixed target, ė = −q̇, which is why the code says <code>− kd·qd</code>.</li></ul>
+<p><b>What is <code>pid_step</code>?</b> One tick of the controller, called every <code>dt</code> seconds inside the control loop. The I term needs a memory between ticks, so the running sum lives in the dictionary <code>state</code> that you pass in every call (<code>state["i"]</code>), and the function returns the torque for this tick. How to find it: it is simply the three terms added together, <code>kp·e + ki·state["i"] − kd·qd</code>, after you have updated the sum with <code>e·dt</code>.</p>
+<div class="card" style="margin:8px 0"><b>Already defined for you</b>: <code>math</code>, <code>M = 0.15</code> kg, <code>G = 9.81</code>, <code>LC = 0.06</code> m (the link’s centre-of-mass distance). <b>You write</b> two functions, <code>pid_step(...)</code> and <code>gravity_ff(q)</code>; the starter marks the blanks.</div>
 <p><b>Your task</b>: write <code>pid_step(state, q, qd, q_target, kp, ki, kd, dt)</code> (add <code>e·dt</code> to <code>state["i"]</code>, return the PID torque) and <code>gravity_ff(q)</code> using the constants <code>M</code>, <code>G</code>, <code>LC</code>. The tests hold a 150 g link level, and the lab does it in MuJoCo.</p>`,
     pre: 'import math\nM, G, LC = 0.15, 9.81, 0.06\nI = M * LC * LC + 0.0008\ndef _hold(ctrl, steps=1500, dt=0.002, target=0.0):\n    q, v = target - 0.3, 0.0\n    for _ in range(steps):\n        tau = max(-1.5, min(1.5, ctrl(q, v)))\n        v += (tau - M * G * LC * math.cos(q)) / I * dt; q += v * dt\n    return q\n',
     starter: `def pid_step(state, q, qd, q_target, kp, ki, kd, dt):
@@ -80,10 +86,13 @@ def gravity_ff(q):
 <p class="mono">τ = kp·(q<sub>target</sub> − q) − kd·q̇ + g(q)</p>
 <p>Gravity on the forearm pulls on both joints (the shoulder also holds the forearm up). With each link’s centre of mass at its middle:</p>
 <p class="mono">g₂ = M2·G·(L2/2)·cos(q₁ + q₂)<br>g₁ = (M1·L1/2 + M2·L1)·G·cos(q₁) + g₂</p>
+<p><b>Reading the variables</b>: <code>q</code> is a pair of joint angles, <code>q = (q1, q2)</code>, so in Python <code>q[0]</code> is the shoulder angle (from horizontal) and <code>q[1]</code> is the elbow angle (relative to the upper arm). They are <i>joint angles</i>, not positions of anything: in the formulas the centres of mass are the “/2” terms (each link’s middle, <code>L1/2</code> and <code>L2/2</code>). <code>qd</code> and <code>q_target</code> are pairs in the same order. Unpack with <code>q1, q2 = q</code> if the indexing is confusing.</p>
+<div class="card" style="margin:8px 0"><b>Already defined for you</b>: <code>math</code>, <code>L1</code>, <code>L2</code> (link lengths, m), <code>M1</code>, <code>M2</code> (link masses, kg), <code>G</code>. <b>You write</b> <code>gravity(q)</code> returning <code>(g1, g2)</code>, and <code>arm_torques(...)</code> returning a list of two torques.</div>
 <p>Combine this with your IK from earlier and you have the classic arm controller: IK turns a hand target into joint targets, PD + g(q) gets the joints there. Move the sliders in the widget above, and untick gravity compensation to feel the difference.</p>
 <p><b>Your task</b>: write <code>gravity(q)</code> and <code>arm_torques(q, qd, q_target, kp, kd)</code> (both return two numbers). The lab sends your torques to a MuJoCo arm through three waypoints.</p>`,
     pre: 'import math\nL1, L2, M1, M2, G = 0.116, 0.135, 0.12, 0.15, 9.81\n',
     starter: `def gravity(q):
+    q1, q2 = q          # shoulder angle, elbow angle
     g2 = ...
     g1 = ...
     return g1, g2

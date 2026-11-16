@@ -8,6 +8,7 @@ import { NEW_LABS } from './labs2.js';
 import { LABS3 } from './labs3.js';
 import { LABS4 } from './labs4.js';
 import { LABS5 } from './labs5.js';
+import { LABS6 } from './labs6.js';
 import { EXPLAIN } from '../course/explain.js';
 import { FEEDBACK_URL, REPO_URL } from '../config.js';
 import { EditorView, basicSetup, keymap, EditorState, Compartment, indentWithTab, indentUnit, python, xml, oneDark } from '../../vendor/codemirror/cm.js';
@@ -29,8 +30,8 @@ const LAYOUT = { red: [0.25, 0.10, 0], blue: [0.33, 0.2, 0] };
 
 // ---- per-lesson labs: extra checks that need JS/MuJoCo, plus the visual on the right ----
 const LABS = {
-  fk({ panel, ns }) {
-    const [, g] = canvas(panel); const fk = ns.get('fk'); let t = 0, raf, bad = false;
+  fk({ panel, ns, ref }) {
+    const [, g] = canvas(panel); const fk = ns.get('fk'), rfk = ref?.get('fk'); let t = 0, raf, bad = false;
     const LK = ns.get('LINKS').toJs(), S = 130 / LK.reduce((u, v) => u + v, 0), ox = 170, oy = 250;
     const draw = () => {
       t += 0.02; const th = [0.9 + 0.6 * Math.sin(t), 0.9 + 0.8 * Math.cos(1.3 * t), -0.6 + 0.7 * Math.sin(0.7 * t)];
@@ -39,6 +40,7 @@ const LABS = {
       let x = 0, y = 0, a = 0; LK.forEach((l, i) => { a += th[i]; x += l * Math.cos(a); y += l * Math.sin(a); g.lineTo(ox + x * S, oy - y * S); }); g.stroke();
       g.fillStyle = '#8d97a8'; g.fillRect(ox - 22, oy, 44, 8);
       try {
+        if (rfk) { const [ex, ey] = rfk(th).toJs(); g.strokeStyle = '#4fd08a'; g.lineWidth = 2; g.beginPath(); g.arc(ox + ex * S, oy - ey * S, 11, 0, 7); g.stroke(); g.fillStyle = '#4fd08a'; g.fillText('green ring = where the hand should be', 10, 50); }
         const [hx, hy] = fk(th).toJs(); g.fillStyle = '#ff9d3c'; g.beginPath(); g.arc(ox + hx * S, oy - hy * S, 7, 0, 7); g.fill();
         g.fillStyle = '#8d97a8'; g.font = '12px monospace'; g.fillText(`θ=(${th.map((v) => v.toFixed(2)).join(', ')})`, 10, 18); g.fillText(`your fk → (${hx.toFixed(3)}, ${hy.toFixed(3)})`, 10, 34);
       } catch { if (!bad) { bad = true; g.fillStyle = '#ff6b6b'; g.fillText('fk() raised an error', 10, 18); } }
@@ -47,8 +49,8 @@ const LABS = {
     draw();
     return { cleanup: () => cancelAnimationFrame(raf) };
   },
-  ik({ panel, ns }) {
-    const [c, g] = canvas(panel); const ik = ns.get('ik');
+  ik({ panel, ns, ref }) {
+    const [c, g] = canvas(panel); const ik = ns.get('ik'), rik = ref?.get('ik');
     const L1 = Number(ns.get('L1')), L2 = Number(ns.get('L2')), S = 130 / (L1 + L2), ox = 170, oy = 190; let target = [0.15, 0.1];
     const draw = () => {
       g.clearRect(0, 0, 340, 300); g.lineCap = 'round';
@@ -59,6 +61,7 @@ const LABS = {
       try {
         const [a, b] = ik(target[0], target[1]).toJs();
         const ex = L1 * Math.cos(a), ey = L1 * Math.sin(a), hx = ex + L2 * Math.cos(a + b), hy = ey + L2 * Math.sin(a + b);
+        if (rik) { const [ra, rb] = rik(target[0], target[1]).toJs(), rx = L1 * Math.cos(ra), ry = L1 * Math.sin(ra); g.strokeStyle = '#4fd08a'; g.lineWidth = 3; g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + rx * S, oy - ry * S); g.lineTo(ox + (rx + L2 * Math.cos(ra + rb)) * S, oy - (ry + L2 * Math.sin(ra + rb)) * S); g.stroke(); }
         g.strokeStyle = '#59647a'; g.lineWidth = 10; g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + ex * S, oy - ey * S); g.lineTo(ox + hx * S, oy - hy * S); g.stroke();
         g.fillText(`click to move the target · θ₁=${a.toFixed(2)} θ₂=${b.toFixed(2)}`, 10, 18);
       } catch { g.fillStyle = '#ff6b6b'; g.fillText('out of reach (or ik() raised an error)', 10, 18); }
@@ -66,12 +69,14 @@ const LABS = {
     c.onclick = (e) => { const r = c.getBoundingClientRect(), k = 340 / r.width; target = [((e.clientX - r.left) * k - ox) / S, (oy - (e.clientY - r.top) * k) / S]; draw(); };
     draw(); return {};
   },
-  pcontrol({ panel, ns }) {
+  pcontrol({ panel, ns, ref }) {
     const c = h('canvas.chart', { style: 'height:220px' }); panel.append(c, h('p.dim', { style: 'font-size:12px' }, 'Joint angle over 2 seconds with your KP (orange) against the target (grey).'));
     try {
       const f = ns.get('p_control'), kp = ns.get('KP'); let q = 0; const data = [0];
       for (let i = 0; i < 40; i++) { q += f(q, 1.0, kp) * 0.05; data.push(Math.max(-1, Math.min(3, q))); }
-      lineChart(c, [{ data: data.map(() => 1), color: '#59647a' }, { data, color: '#ff9d3c' }], { ymin: 0, ymax: Math.max(1.5, ...data) });
+      const series = [{ data: data.map(() => 1), color: '#59647a' }, { data, color: '#ff9d3c' }];
+      if (ref) { const rf = ref.get('p_control'), rk = ref.get('KP'); let rq = 0; const rd = [0]; for (let i = 0; i < 40; i++) { rq += rf(rq, 1.0, rk) * 0.05; rd.push(rq); } series.push({ data: rd, color: '#4fd08a' }); panel.append(h('p.dim', { style: 'font-size:12px' }, 'Green: the reference solution, for comparison.')); }
+      lineChart(c, series, { ymin: 0, ymax: Math.max(1.5, ...data) });
     } catch { /* tests already report the error */ }
     return {};
   },
@@ -166,6 +171,7 @@ const LABS = {
   ...LABS3,
   ...LABS4,
   ...LABS5,
+  ...LABS6,
 };
 
 
@@ -194,7 +200,7 @@ export default {
       setLang(k) { cm.dispatch({ effects: langConf.reconfigure(k === 'xml' ? xml() : python()) }); },
     };
     window.lab.setCode = (v) => { editor.value = v; if (lesson) { state.course.code[lesson.id] = v; save(); } };
-    const results = h('div'), term = h('.term', { style: 'min-height:40px' }), panel = h('.col'), title = h('h2'), crumb = h('.dim', { style: 'font-size:12px' });
+    const results = h('div'), term = h('.term#term', { style: 'min-height:140px;max-height:70vh;resize:vertical' }), panel = h('.col'), title = h('h2'), crumb = h('.dim', { style: 'font-size:12px' });
     const runBtn = h('button#run-tests', { onclick: run }, 'Run tests');
     const nextBtn = h('button.ok#next-lesson', { hidden: true, onclick: () => { const i = ORDERED.indexOf(lesson); if (ORDERED[i + 1]) open(ORDERED[i + 1]); } }, 'Next lesson →');
     const hintBtn = h('button.ghost', { onclick: () => { fill(results, h('.card', { html: '💡 ' + lesson.hint })); } }, 'Hint');
@@ -302,10 +308,18 @@ export default {
           }
         }
         const pyPassed = rows.every((r) => r[1]);
-        if (lesson.viz && alive && (lesson.lang === 'xml' || rows[0]?.[0] !== 'your code runs without errors')) {
-          const lab = await LABS[lesson.viz]({ panel, ns, py, code, pyOk: pyPassed });
+        if (lesson.viz && alive) {
+          // The lab bench always shows up. It uses your code; if your code cannot run, it shows the reference solution instead (and never counts that towards passing).
+          let refNs = null;
+          if (py && lesson.solution && lesson.lang !== 'xml') { try { refNs = py.globals.get('dict')(); if (lesson.pre) py.runPython(lesson.pre, { globals: refNs }); py.runPython(lesson.solution, { globals: refNs }); } catch { refNs = null; } }
+          const call = (n, r) => LABS[lesson.viz]({ panel, ns: n, py, code, pyOk: true, ref: r });
+          let lab = null, usedRef = false;
+          try { if (!pyOk) throw new Error('your code did not run'); lab = await call(ns, refNs); }
+          catch (e) { fill(panel); if (refNs) { try { lab = await call(refNs, null); usedRef = true; } catch { /* nothing to show */ } } }
           if (!alive) lab?.cleanup?.(); else labCleanup = lab?.cleanup || null;
-          for (const t of lab?.tests || []) rows.push(t);
+          if (usedRef) panel.prepend(h('p.bad', { style: 'font-size:12.5px' }, 'Your code could not drive this lab yet, so this is the reference solution running, to show what the goal looks like. Fix the errors above and run again.'));
+          else if (!pyPassed && lesson.lang !== 'xml') panel.prepend(h('p.dim', { style: 'font-size:12.5px' }, 'Some tests are failing: this is what your code does right now.'));
+          if (!usedRef) for (const t of lab?.tests || []) rows.push(t);
         }
       } catch (e) { rows.push(['lab ran', false, String(e.message || e)]); }
       term.textContent = out.join('\n') || (lesson.lang === 'xml' ? 'compiled with MuJoCo.' : '(no output)');

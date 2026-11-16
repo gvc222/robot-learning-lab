@@ -12,8 +12,10 @@ import evalApp from './apps/eval.js';
 import brief from './apps/brief.js';
 import leader from './apps/leader.js';
 import handcam from './apps/handcam.js';
+import sandbox from './apps/sandbox.js';
 
-const APPS = [tickets, academy, teleop, leader, handcam, dataset, dreams, train, evalApp, brief,
+leader.sandbox = handcam.sandbox = true;   // reachable from the Sandbox hub, not from the dock
+const APPS = [tickets, academy, teleop, dataset, dreams, train, evalApp, brief, sandbox, leader, handcam,
   { id: 'chat', icon: '💬', title: 'Chat', narrowOnly: true, mount(el) { const c = $('#chat'); c.classList.add('as-app'); el.append(c); return () => { c.classList.remove('as-app'); $('#shell').append(c); }; } }];
 let current = null, unmount = null;
 
@@ -24,7 +26,7 @@ export function openApp(id) {
   fill(el, ); el.scrollTop = 0;
   current = id;
   $('#win-title').textContent = `${app.title}`;
-  document.querySelectorAll('#dock button').forEach((b) => b.classList.toggle('active', b.dataset.app === id));
+  document.querySelectorAll('#dock button').forEach((b) => b.classList.toggle('active', b.dataset.app === id || (app.sandbox && b.dataset.app === 'sandbox')));
   unmount = app.mount(el, { openApp }) || null;
   bus.emit('app', id);
 }
@@ -32,6 +34,7 @@ export function openApp(id) {
 function buildDock() {
   const dock = $('#dock');
   for (const a of APPS) {
+    if (a.sandbox) continue;
     const b = h('button', { 'data-app': a.id, 'data-title': a.title, onclick: () => openApp(a.id) }, h('span.ico', {}, a.icon), a.title);
     if (a.narrowOnly) b.classList.add('narrow-only');
     dock.append(b);

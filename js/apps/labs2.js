@@ -225,13 +225,25 @@ export const NEW_LABS = {
   },
   motors({ panel, done }) {
     const ORDER = [['gripper', 6], ['wrist_roll', 5], ['wrist_flex', 4], ['elbow_flex', 3], ['shoulder_lift', 2], ['shoulder_pan', 1]];
-    const st = { stage: 'port', idx: 0, connected: new Set(), usb: true, ids: {} };
-    const term = h('.term', { style: 'max-height:240px;min-height:160px' }), log = (t) => { term.textContent += t + '\n'; term.scrollTop = term.scrollHeight; };
-    const motors = h('.col', { style: 'gap:4px' }), actions = h('.row', { style: 'margin-top:8px' });
+    // Chain order from the base: shoulder_pan(1) … gripper(6). All cables start plugged in (an assembled arm); the board starts on shoulder_pan.
+    const CH = ORDER.slice().reverse().map(([m]) => m);
+    const st = { stage: 'port', idx: 0, usb: true, ids: {}, cut: new Set(), plug: 0 };
+    const connectedSet = () => { let lo = st.plug, hi = st.plug; while (lo > 0 && !st.cut.has(lo)) lo--; while (hi < CH.length - 1 && !st.cut.has(hi + 1)) hi++; return new Set(CH.slice(lo, hi + 1)); };
+    const term = h('.term', { style: 'max-height:240px;min-height:160px;resize:vertical' }), log = (t) => { term.textContent += t + '\n'; term.scrollTop = term.scrollHeight; };
+    const diagram = h('div'), actions = h('.row', { style: 'margin-top:8px' });
+    const Y = (i) => 14 + i * 52;
+    const drawDiagram = () => {
+      const on = connectedSet(), editable = st.stage === 'ids';
+      const cables = CH.slice(1).map((_, k) => { const i = k + 1, cut = st.cut.has(i), y0 = Y(i - 1) + 32, y1 = Y(i);
+        return `<g data-cable="${i}" style="cursor:${editable ? 'pointer' : 'default'}"><line x1="190" y1="${y0}" x2="190" y2="${y1}" stroke="${cut ? '#59647a' : '#4fd08a'}" stroke-width="4" ${cut ? 'stroke-dasharray="3 5"' : ''}/><line x1="190" y1="${y0 - 4}" x2="190" y2="${y1 + 4}" stroke="transparent" stroke-width="22"/>${editable ? `<text x="206" y="${(y0 + y1) / 2 + 4}" fill="#8d97a8" font-size="11">${cut ? 'unplugged' : 'click to unplug'}</text>` : ''}</g>`; }).join('');
+      const motors = CH.map((m, i) => `<g data-motor="${i}" style="cursor:${editable ? 'pointer' : 'default'}"><rect x="140" y="${Y(i)}" width="100" height="32" rx="7" fill="${on.has(m) ? '#27422f' : '#161b24'}" stroke="${on.has(m) ? '#4fd08a' : '#394152'}" stroke-width="${i === st.plug ? 3 : 1.5}"/><text x="190" y="${Y(i) + 20}" text-anchor="middle" fill="#d7deea" font-size="12" font-family="monospace">${m}</text><text x="250" y="${Y(i) + 20}" fill="${st.ids[m] ? '#4fd08a' : '#8d97a8'}" font-size="11">${st.ids[m] ? 'id ' + st.ids[m] : 'id 1'}</text></g>`).join('');
+      const py = Y(st.plug) + 16;
+      diagram.innerHTML = `<svg viewBox="0 0 340 ${Y(5) + 46}" style="width:100%;max-width:340px;background:#0a0c10;border-radius:8px;border:1px solid var(--line)"><rect x="12" y="${Y(2) + 10}" width="62" height="44" rx="6" fill="#2a3140" stroke="#ff9d3c"/><text x="43" y="${Y(2) + 36}" text-anchor="middle" fill="#ff9d3c" font-size="12">board</text><path d="M74 ${Y(2) + 32} C 110 ${Y(2) + 32}, 100 ${py}, 140 ${py}" stroke="#ff9d3c" stroke-width="3" fill="none"/>${cables}${motors}</svg>`;
+      diagram.querySelectorAll('[data-cable]').forEach((n) => n.addEventListener('click', () => { if (!editable) return; const i = +n.dataset.cable; st.cut.has(i) ? st.cut.delete(i) : st.cut.add(i); drawDiagram(); }));
+      diagram.querySelectorAll('[data-motor]').forEach((n) => n.addEventListener('click', () => { if (!editable) return; st.plug = +n.dataset.motor; drawDiagram(); }));
+    };
     const render = () => {
-      motors.replaceChildren(...ORDER.map(([m]) => h('label.check', { style: 'margin:0' },
-        h('input', { type: 'checkbox', checked: st.connected.has(m), disabled: st.stage !== 'ids', onchange: (e) => { e.target.checked ? st.connected.add(m) : st.connected.delete(m); } }),
-        h('span.mono', {}, m), st.ids[m] ? h('span.chip.good', {}, `id ${st.ids[m]}`) : h('span.chip', {}, 'id 1 (factory)'))));
+      drawDiagram();
       actions.replaceChildren(
         st.stage === 'port' ? h('button.small', { onclick: () => {
           if (st.usb) { log('$ lerobot-find-port\nFinding all available ports for the MotorBus.\n[\'/dev/ttyACM0\', \'/dev/ttyACM1\']\nRemove the USB cable from your MotorsBus and press Enter when done.'); st.usb = false; render(); }
@@ -242,15 +254,15 @@ export const NEW_LABS = {
     };
     const prompt = () => log(`Connect the controller board to the '${ORDER[st.idx][0]}' motor only and press enter.`);
     function enter() {
-      const [m, id] = ORDER[st.idx], c = [...st.connected];
+      const [m, id] = ORDER[st.idx], c = [...connectedSet()];
       if (!c.length) return log('Error: no motor found on the bus. Check the power supply, the USB cable and the 3-pin cable. (Waveshare board? Jumpers on B.)');
       if (c.length > 1) return log(`Error: found ${c.length} motors on the bus. Disconnect all but '${m}': with factory IDs they all answer as id 1.`);
       if (c[0] !== m) return log(`Error: that is the '${c[0]}' motor. The script expects '${m}' now.`);
-      st.ids[m] = id; st.connected.clear(); log(`'${m}' motor id set to ${id}`);
+      st.ids[m] = id; log(`'${m}' motor id set to ${id}`);
       if (++st.idx >= ORDER.length) { st.stage = 'done'; log('\nDone. You can now daisy-chain the motors.'); done?.(); } else prompt();
       render();
     }
-    panel.append(note('Tick which motor is plugged into the controller board, then press Enter like you would in the terminal.'), motors, actions, term);
+    panel.append(note('Click a motor to plug the controller board into it, and click a cable between two motors to unplug it. Only the motors still connected to the board (green) will answer. Then press Enter like you would in the terminal.'), diagram, actions, term);
     render();
     return {};
   },

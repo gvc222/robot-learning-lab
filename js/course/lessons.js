@@ -2,6 +2,7 @@ import { MORE } from './lessons2.js';
 import { MORE3, COURSES3 } from './lessons3.js';
 import { CONTROL_INTRO, CONTROL_MORE } from './lessons4.js';
 import { MORE5, COURSES5 } from './lessons5.js';
+import { MORE6 } from './lessons6.js';
 // Academy curriculum. Each lesson: explanation, starter code, a reference solution, and tests.
 // Python lessons run in Pyodide (CPython compiled to WebAssembly); tests are plain asserts.
 // `pre` runs before the learner's code. `viz` names a visualisation in apps/academy.js.
@@ -12,9 +13,9 @@ export const COURSES = [
   { id: 'rl', title: 'Reinforcement learning', blurb: 'Rewards, Q-learning, random search and reward models.' },
   { id: 'data', title: 'Data, language & human video', blurb: 'Subtasks, captions, egocentric pretraining, eval statistics, LeRobot export.' },
   { id: 'hardware', title: 'Build an SO-101', blurb: 'From a box of parts to a calibrated arm with cameras.' },
-  { id: 'corl', title: 'CoRL 2026 Review Club', blurb: 'The award finalists and other landmark papers, reviewed hands-on.' },
   ...COURSES3,
   ...COURSES5,
+  { id: 'corl', title: '🧪 Sandbox: CoRL 2026 Review Club', blurb: 'Exploratory: the award finalists and other landmark papers, reviewed hands-on.' },
 ];
 const UNIT_COURSE = { 1: 'basics', 2: 'sim', 3: 'rl' };
 
@@ -77,6 +78,7 @@ export const LESSONS = [
 <p>For two links there is a closed-form answer from the law of cosines. (With a third link, like the SO-101’s wrist, there are infinitely many answers, since the wrist can tilt freely. The usual trick is to choose the wrist angle yourself, move the target back by the last link, and solve the remaining two links as below.)</p>
 <p class="mono">cos(θ₂) = (x² + y² − L1² − L2²) / (2·L1·L2)<br>θ₁ = atan2(y, x) − atan2(L2·sin(θ₂), L1 + L2·cos(θ₂))</p>
 <p>Drag the target in the widget first: notice the two solutions (elbow down and elbow up, the ± of the arccos) and the ring of reachable points. This is exactly how the lab’s arm turns your keyboard’s “move left” into joint commands.</p>
+<div class="card" style="margin:8px 0"><b>Already defined for you</b>: <code>math</code> (imported), <code>L1 = 0.116</code> and <code>L2 = 0.135</code> (link lengths in metres). <b>You write</b> a function named <code>ik(x, y)</code> that takes the target in metres and returns the two angles <code>(theta1, theta2)</code> in radians. The names <code>c2</code>, <code>theta1</code>, <code>theta2</code> inside it are just your own working variables.</div>
 <p><b>Your task</b>: fill in the two missing lines. Then <b>click anywhere in the picture</b>: the arm uses <i>your</i> function to reach for the click.</p>`,
     pre: PY_ARM,
     starter: `def ik(x, y):\n    c2 = ...                      # cos(theta2), from the formula\n    theta2 = math.acos(c2)\n    theta1 = math.atan2(y, x) - ...\n    return theta1, theta2\n\nprint(ik(0.15, 0.1))\n`,
@@ -92,6 +94,7 @@ export const LESSONS = [
     id: 'pcontrol', unit: 1, course: 'basics', title: 'P control: one joint', viz: 'pcontrol', explain: 'presp',
     text: `<p>Knowing the angle you want is not the same as being there. A <b>controller</b> runs many times per second: measure where the joint is, compare with where it should be, push accordingly.</p>
 <p>The simplest one is <b>proportional (P) control</b>: push in proportion to the error.</p><p class="mono">command = kp × (target − current)</p>
+<p><b>Two spellings, on purpose</b>: lowercase <code>kp</code> is the <i>parameter</i> inside your function (a local name; the function works for any gain). Capital <code>KP</code> is the <i>constant</i> you choose at the bottom, the actual gain value the tests pass in as <code>p_control(q, target, KP)</code>. Python treats <code>KP</code> and <code>kp</code> as two unrelated names, and the capitals are only a convention for “a setting at the top of the file”.</p>
 <p>Too small a gain <code>kp</code> and the joint crawls. Too big and it overshoots and oscillates. Drag the sliders above: what matters is kp × (loop period). With our 20 Hz loop, anything above 20 overshoots and above 40 it explodes; run the loop faster and you can afford a higher gain.</p>
 <p><b>Your task</b>: write <code>p_control</code>, then pick a gain <code>KP</code> that gets within 1% of the target in under one second without overshooting. The plot shows the response.</p>`,
     starter: `def p_control(q, q_target, kp):\n    return ...\n\nKP = 1.0   # tune me\n`,
@@ -208,4 +211,16 @@ def _greedy_path(Q):
   ...MORE,
   ...MORE3,
   ...MORE5,
+  ...MORE6,
 ];
+
+// Slot the newer lessons where they teach best (the arrays above are in the order they were written).
+function place(id, beforeId) {
+  const i = LESSONS.findIndex((l) => l.id === id), j = LESSONS.findIndex((l) => l.id === beforeId);
+  if (i < 0 || j < 0) return;
+  const [l] = LESSONS.splice(i, 1); LESSONS.splice(LESSONS.findIndex((x) => x.id === beforeId), 0, l);
+}
+place('rotations', 'pointcloud');
+place('singularity', 'rrt');
+place('trajtime', 'rrt');
+place('slam', 'delivery');

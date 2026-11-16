@@ -100,3 +100,7 @@ textarea.code { width: 100%; min-height: 220px; flex: 1; background: #0a0c10; co
   .view3d { min-height: 52vw; flex: none; } #topbar .brand .dim, #clock { display: none; } #topbar { gap: 8px; }
 }
 [hidden] { display: none !important; }
+
+.lesson-text a, .explain a, .card a { color: #6db3ff; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+.lesson-text a:hover, .card a:hover { color: #9fd0ff; }
+.term { resize: vertical; }

@@ -31,8 +31,15 @@ for (const l of lessons) {
   } else if (l.kind === 'lab') { // the SO-101 motor bench
     await page.click('button:has-text("Run lerobot-find-port")'); await page.click('button:has-text("Unplug USB")');
     await page.click('button:text-is("Press Enter")'); // nothing connected -> error
-    for (const m of ['gripper', 'wrist_roll', 'wrist_flex', 'elbow_flex', 'shoulder_lift', 'shoulder_pan']) {
-      await page.locator('label.check', { hasText: m }).locator('input').check();
+    // all cables start plugged in: pressing Enter with six motors on the bus must be refused
+    await page.click('button:text-is("Press Enter")');
+    for (const k of [5, 4, 3, 2, 1, 0]) {   // gripper first … shoulder_pan last (chain index 0 = shoulder_pan)
+      await page.locator(`[data-motor="${k}"]`).dispatchEvent('click');
+      for (const c of [k, k + 1]) {
+        if (c < 1 || c > 5) continue;
+        const cut = await page.locator(`[data-cable="${c}"]`).textContent();
+        if (cut.includes('click to unplug')) await page.locator(`[data-cable="${c}"]`).dispatchEvent('click');
+      }
       await page.click('button:text-is("Press Enter")');
     }
   } else {
@@ -216,6 +223,8 @@ await page.evaluate(() => {
   const port = { open: async () => {}, close: async () => {}, readable, writable };
   Object.defineProperty(navigator, 'serial', { value: { requestPort: async () => port }, configurable: true });
 });
+await app('sandbox');
+check('sandbox hub lists hand cam, leader arm and the CoRL club', await page.locator('#sb-handcam').count() === 1 && await page.locator('#sb-leader').count() === 1 && await page.locator('#sb-corl').count() === 1);
 await app('leader');
 await page.waitForFunction(() => document.querySelector('#l-status')?.textContent === 'sliders', null, { timeout: 60000 });
 await page.click('#l-connect');
