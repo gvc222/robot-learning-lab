@@ -19,11 +19,22 @@ async function buildHand(mj) {
     <light pos="0.2 -0.3 0.6" dir="-0.3 0.4 -1" diffuse="0.9 0.9 0.9"/>
     <geom name="floor" type="plane" size="0.4 0.4 0.05" pos="0 0 -0.02" rgba="0.2 0.23 0.28 1"/>`));
   const model = mj.MjModel.from_xml_path(path), data = new mj.MjData(model);
+  const cur = {};
   model.opt.gravity[2] = 0;  // the palm is fixed; keep fingers from sagging between frames
   const act = Object.fromEntries(LEAP_ORDER.map((n) => [n, idOf(mj, model, 'mjOBJ_ACTUATOR', `${n}_act`)]));
   return {
     model, data,
+    joint(n) { const j = mj.mj_name2id(model, mj.mjtObj.mjOBJ_JOINT.value, n); return j < 0 ? null : data.qpos[model.jnt_qposadr[j]]; },
     command(t) { for (const [n, a] of Object.entries(act)) { const lo = model.actuator_ctrlrange[2 * a], hi = model.actuator_ctrlrange[2 * a + 1]; data.ctrl[a] = Math.min(hi, Math.max(lo, t[n])); } },
+    // Mirror the targets exactly: set the joint angles directly (smoothed), so the simulated hand always matches your hand. Gravity is off, so nothing needs to settle.
+    pose(t, k = 0.6) {
+      for (const n of LEAP_ORDER) {
+        const j = mj.mj_name2id(model, mj.mjtObj.mjOBJ_JOINT.value, n); if (j < 0) continue;
+        const lo = model.jnt_range[2 * j], hi = model.jnt_range[2 * j + 1], v = Math.min(hi, Math.max(lo, t[n]));
+        cur[n] = cur[n] === undefined ? v : cur[n] + (v - cur[n]) * k; data.qpos[model.jnt_qposadr[j]] = cur[n];
+      }
+      mj.mj_forward(model, data);
+    },
     step(sec) { const n = Math.round(sec / model.opt.timestep); for (let k = 0; k < n; k++) mj.mj_step(model, data); },
     dispose() { data.delete(); model.delete(); },
   };
@@ -32,7 +43,7 @@ async function buildHand(mj) {
 export default {
   id: 'handcam', icon: '🖐', title: 'Hand Cam',
   mount(el) {
-    let mj, hand, viewer, raf, alive = true, landmarker = null, stream = null, lastVideoT = -1, locked = false, preview = null, score = 0;
+    let mj, hand, viewer, raf, alive = true, landmarker = null, stream = null, lastVideoT = -1, aligning = false, preview = null, score = 0, calib = null;
     let L = handLandmarks(PROTOTYPES[10]), img = null, source = 'demo', top = [], log = [];
     const video = h('video', { playsinline: true, muted: true, style: 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)' });
     const overlay = h('canvas#hc-overlay', { width: 640, height: 480, style: 'position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1)' });
@@ -43,7 +54,10 @@ export default {
     const demoSel = h('select#hc-demo', { onchange: (e) => { stopCam(); L = handLandmarks(PROTOTYPES[+e.target.value]); img = null; source = 'demo'; $('#hc-src').textContent = `demo pose: ${FEIX[+e.target.value]}`; } },
       FEIX.map((n, i) => h('option', { value: i, selected: i === 10 }, `${i + 1}. ${n}`)));
     const camBtn = h('button#hc-cam', { onclick: () => (stream ? stopCam() : startCam()) }, '📷 Start webcam');
-    const trackBtn = h('button#hc-track', { hidden: true, onclick: () => { locked = !locked; trackBtn.textContent = locked ? '↺ Show the outline again' : '✋ Match the outline, then click to track'; $('#hc-src').textContent = locked ? 'webcam: tracking' : 'webcam: match the outline'; if (!locked) img = null; } }, '✋ Match the outline, then click to track');
+    const trackBtn = h('button#hc-track', { hidden: true, onclick: () => {
+      if (aligning) { calib = features(L); aligning = false; trackBtn.textContent = '↺ Re-align with the outline'; $('#hc-src').textContent = 'webcam: calibrated, tracking'; toast('Calibrated: your open hand is now “zero”.'); }
+      else { aligning = true; calib = null; trackBtn.textContent = '✋ Open hand on the outline, then click to calibrate'; $('#hc-src').textContent = 'webcam: match the blue outline'; }
+    } }, '✋ Open hand on the outline, then click to calibrate');
     const logList = h('#hc-log');
     const side = h('.side.right', {},
       h('h3', {}, 'Grasp type (Feix GRASP taxonomy)'), result,
@@ -70,64 +84,73 @@ export default {
 
     async function startCam() {
       try {
-        if (!landmarker) {
-          $('#hc-src').textContent = 'loading hand tracker…';
-          const { FilesetResolver, HandLandmarker } = await import('../../vendor/mediapipe/vision_bundle.mjs');
-          const files = await FilesetResolver.forVisionTasks(new URL('../../vendor/mediapipe/wasm', import.meta.url).href);
-          landmarker = await HandLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' }, runningMode: 'VIDEO', numHands: 1 });
-        }
         stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
         video.srcObject = stream; await video.play();
-        camBtn.textContent = '■ Stop webcam'; source = 'webcam'; locked = false; preview = null; trackBtn.hidden = false; trackBtn.textContent = '✋ Match the outline, then click to track'; $('#hc-src').textContent = 'webcam: match the outline';
-      } catch (e) { stopCam(); toast(`Webcam unavailable: ${e.message}`); }
+        camBtn.textContent = '■ Stop webcam'; source = 'webcam'; aligning = true; calib = null; preview = null; trackBtn.hidden = false;
+        trackBtn.textContent = '✋ Open hand on the outline, then click to calibrate'; $('#hc-src').textContent = 'loading hand tracker…';
+      } catch (e) { stopCam(); toast(`Webcam unavailable: ${e.message}`); return; }
+      try {
+        if (!landmarker) {
+          if (window.__fakeLandmarker) landmarker = window.__fakeLandmarker;   // test seam
+          else {
+            const { FilesetResolver, HandLandmarker } = await import('../../vendor/mediapipe/vision_bundle.mjs');
+            const files = await FilesetResolver.forVisionTasks(new URL('../../vendor/mediapipe/wasm', import.meta.url).href);
+            const make = (delegate) => HandLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: MODEL_URL, delegate }, runningMode: 'VIDEO', numHands: 1 });
+            try { landmarker = await make('GPU'); } catch { landmarker = await make('CPU'); }   // some laptops have no usable GPU delegate
+          }
+        }
+        if (stream) $('#hc-src').textContent = aligning ? 'match the blue outline' : 'webcam: tracking';
+      } catch (e) { $('#hc-src').textContent = 'hand tracker failed to load'; toast(`Hand tracker could not load (it downloads a model from Google, so it needs internet): ${e.message}`); }
     }
     function stopCam() {
-      stream?.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; camBtn.textContent = '📷 Start webcam'; trackBtn.hidden = true; locked = false; preview = null;
+      stream?.getTracks().forEach((t) => t.stop()); stream = null; video.srcObject = null; camBtn.textContent = '📷 Start webcam'; trackBtn.hidden = true; aligning = false; preview = null; calib = null;
       if (source === 'webcam') { source = 'demo'; $('#hc-src').textContent = 'demo pose'; }
     }
     function track() {
       if (!stream || !landmarker || video.readyState < 2 || video.currentTime === lastVideoT) return;
       lastVideoT = video.currentTime;
       const r = landmarker.detectForVideo(video, performance.now());
-      if (!locked) { preview = r.landmarks?.[0] || null; score = preview ? matchScore(preview) : 0; return; }  // aligning: show the guide, do not drive the model yet
-      if (r.worldLandmarks?.[0]) { L = r.worldLandmarks[0].map((p) => [p.x, p.y, p.z]); img = r.landmarks[0]; $('#hc-src').textContent = 'webcam: tracking'; }
-      else { img = null; $('#hc-src').textContent = 'webcam: no hand in view'; }
+      if (r.worldLandmarks?.[0]) {
+        L = r.worldLandmarks[0].map((p) => [p.x, p.y, p.z]); img = r.landmarks[0]; preview = img; score = matchScore(img);
+        if (!aligning) $('#hc-src').textContent = 'webcam: tracking';
+      } else { img = null; preview = null; score = 0; if (!aligning) $('#hc-src').textContent = 'webcam: no hand in view'; }
     }
     // Demo poses come from a 3D hand model: draw them with a simple projection so the camera pane is never empty.
     const demoImage = () => L.map(([x, y, z]) => ({ x: 0.5 - 4.2 * x + 1.2 * z, y: 0.9 - 4.2 * y + 2.2 * z }));
     function drawOverlay() {
       const g = overlay.getContext('2d'); g.clearRect(0, 0, 640, 480);
-      if (source === 'webcam' && !locked) {
+      if (source === 'webcam' && aligning) {
         g.strokeStyle = '#6db3ff'; g.lineWidth = 4; g.setLineDash([8, 6]);
         for (const [a, b] of BONES) { g.beginPath(); g.moveTo(GUIDE[a].x * 640, GUIDE[a].y * 480); g.lineTo(GUIDE[b].x * 640, GUIDE[b].y * 480); g.stroke(); }
         g.setLineDash([]); g.fillStyle = '#6db3ff'; for (const p of GUIDE) { g.beginPath(); g.arc(p.x * 640, p.y * 480, 5, 0, 7); g.fill(); }
-        if (preview) { g.strokeStyle = 'rgba(255,157,60,.8)'; g.lineWidth = 2; for (const [a, b] of BONES) { g.beginPath(); g.moveTo(preview[a].x * 640, preview[a].y * 480); g.lineTo(preview[b].x * 640, preview[b].y * 480); g.stroke(); } }
-        $('#hc-src').textContent = preview ? `match the blue outline: ${score}%` : 'webcam: put your hand on the blue outline';
+        if (preview) { g.strokeStyle = 'rgba(255,157,60,.9)'; g.lineWidth = 2; for (const [a, b] of BONES) { g.beginPath(); g.moveTo(preview[a].x * 640, preview[a].y * 480); g.lineTo(preview[b].x * 640, preview[b].y * 480); g.stroke(); } }
+        $('#hc-src').textContent = preview ? `match the blue outline: ${score}%` : 'put your hand on the blue outline';
         return;
       }
-      const img_ = source === 'demo' ? demoImage() : img;
-      if (!img_) return;
-      const img = img_;
+      const pts = source === 'demo' ? demoImage() : img;
+      if (!pts) return;
       g.strokeStyle = '#4fd08a'; g.lineWidth = 3;
-      for (const [a, b] of BONES) { g.beginPath(); g.moveTo(img[a].x * 640, img[a].y * 480); g.lineTo(img[b].x * 640, img[b].y * 480); g.stroke(); }
-      g.fillStyle = '#ff9d3c'; for (const p of img) { g.beginPath(); g.arc(p.x * 640, p.y * 480, 4, 0, 7); g.fill(); }
+      for (const [a, b] of BONES) { g.beginPath(); g.moveTo(pts[a].x * 640, pts[a].y * 480); g.lineTo(pts[b].x * 640, pts[b].y * 480); g.stroke(); }
+      g.fillStyle = '#ff9d3c'; for (const p of pts) { g.beginPath(); g.arc(p.x * 640, p.y * 480, 4, 0, 7); g.fill(); }
     }
 
     (async () => {
       mj = await loadMujoco(); if (!alive) return;
       hand = await buildHand(mj); if (!alive) { hand.dispose(); return; }
       viewer = new Viewer(view, { cam: [0.2, -0.24, 0.36], look: [0.0, 0.0, 0.17], groups: [1], minDist: 0.12, maxDist: 0.8, show: (m, i) => m.geom_group[i] === 1 || m.geom_type[i] === 7 });
-      viewer.setSim({ model: hand.model, data: hand.data });
+      viewer.setSim({ model: hand.model, data: hand.data }); window.__hcHand = hand;
       for (const m of viewer.meshes) if (m.material.color.getHex() < 0x333333) m.material.color.setHex(0x3a4250);  // LEAP's black parts, readable on a dark background
       $('#hc-status').textContent = 'LEAP Hand (MuJoCo Menagerie)';
       let last = performance.now(), lastCls = 0;
       const loop = (now) => {
         if (!alive) return;
+        raf = requestAnimationFrame(loop);   // schedule first: one bad frame must not freeze the hand
         const dt = Math.min(0.05, (now - last) / 1000); last = now;
-        track();
+        try { track(); } catch (e) { $('#hc-src').textContent = `tracker error: ${e.message}`; }
         if (now - lastCls > 100) { top = classify(L); renderResult(); drawOverlay(); lastCls = now; }
-        hand.command(leapTargets(features(L))); hand.step(dt);
-        viewer.draw(); raf = requestAnimationFrame(loop);
+        const f = features(L); if (calib) { f.m = f.m.map((v, i) => Math.max(0, v - calib.m[i])); f.c = f.c.map((v, i) => Math.max(0, v - calib.c[i])); f.tf = Math.max(0, f.tf - calib.tf); }
+        hand.pose(leapTargets(f));
+        viewer.draw();
       };
       raf = requestAnimationFrame(loop);
     })();

@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "python3 -m http.server 8000",
-    "test": "node tests/sim.test.mjs && node tests/guide.test.mjs",
+    "test": "node tests/sim.test.mjs && node tests/guide.test.mjs && node tests/handcam.test.mjs",
     "test:calibration": "node tests/models.test.mjs",
     "test:e2e": "node tests/e2e.mjs"
   }
