@@ -8,6 +8,7 @@ import { NEW_LABS } from './labs2.js';
 import { LABS3 } from './labs3.js';
 import { LABS4 } from './labs4.js';
 import { EXPLAIN } from '../course/explain.js';
+import { EditorView, basicSetup, keymap, EditorState, Compartment, indentWithTab, indentUnit, python, xml, oneDark } from '../../vendor/codemirror/cm.js';
 import { Viewer } from '../sim/viewer.js';
 
 let pyPromise = null;
@@ -173,7 +174,21 @@ export default {
     let lesson = ORDERED.find((l) => l.id === state.seen.lastLesson) || ORDERED.find((l) => !state.course.done[l.id]) || ORDERED[0];
     let labCleanup = null, ns = null, busy = false, alive = true;
     const open_ = state.seen.openCourses ||= { [lesson.course]: true };
-    const nav = h('.side.lesson-nav', { style: 'width:230px' }), text = h('.lesson-text'), editor = h('textarea.code', { spellcheck: false });
+    const nav = h('.side.lesson-nav', { style: 'width:230px' }), text = h('.lesson-text'), edBox = h('.code-editor');
+    // A real code editor (CodeMirror 6): syntax colours, auto-indent, bracket matching, no spellcheck.
+    const langConf = new Compartment(); let settingValue = false;
+    const cm = new EditorView({ parent: edBox, state: EditorState.create({ doc: '', extensions: [
+      keymap.of([{ key: 'Mod-Enter', run: () => { run(); return true; } }, indentWithTab]), basicSetup, indentUnit.of('    '), EditorState.tabSize.of(4), oneDark, langConf.of(python()),
+      EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off', 'data-gramm': 'false' }),
+      EditorView.updateListener.of((u) => { if (u.docChanged && !settingValue && lesson) { state.course.code[lesson.id] = u.state.doc.toString(); save(); } }),
+    ] }) });
+    const editor = {
+      get value() { return cm.state.doc.toString(); },
+      set value(v) { settingValue = true; cm.dispatch({ changes: { from: 0, to: cm.state.doc.length, insert: v } }); settingValue = false; },
+      set hidden(v) { edBox.hidden = v; },
+      setLang(k) { cm.dispatch({ effects: langConf.reconfigure(k === 'xml' ? xml() : python()) }); },
+    };
+    window.lab.setCode = (v) => { editor.value = v; if (lesson) { state.course.code[lesson.id] = v; save(); } };
     const results = h('div'), term = h('.term', { style: 'min-height:40px' }), panel = h('.col'), title = h('h2'), crumb = h('.dim', { style: 'font-size:12px' });
     const runBtn = h('button#run-tests', { onclick: run }, 'Run tests');
     const nextBtn = h('button.ok#next-lesson', { hidden: true, onclick: () => { const i = ORDERED.indexOf(lesson); if (ORDERED[i + 1]) open(ORDERED[i + 1]); } }, 'Next lesson →');
@@ -184,11 +199,6 @@ export default {
     const quizBox = h('#quiz.col', { style: 'gap:10px' });
     const explainBox = h('#explain'); let explainCleanup = null;
     const sidePanel = h('.side.right', { style: 'width:360px' }, h('h3', {}, 'Lab bench'), panel);
-    editor.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') { e.preventDefault(); const s = editor.selectionStart; editor.setRangeText('    ', s, editor.selectionEnd, 'end'); }
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); }
-    });
-    editor.addEventListener('input', () => { state.course.code[lesson.id] = editor.value; save(); });
 
     function pass() {
       if (!state.course.done[lesson.id]) toast(`Lesson passed: ${lesson.title}`);
@@ -220,7 +230,7 @@ export default {
       sidePanel.hidden = k === 'quiz';
       fill(results); nextBtn.hidden = true;
       if (k === 'py' || k === 'xml') {
-        editor.value = state.course.code[l.id] ?? l.starter;
+        editor.setLang(k); editor.value = state.course.code[l.id] ?? l.starter;
         term.textContent = k === 'xml' ? 'MJCF (MuJoCo XML). Press Run tests to compile and simulate it.' : 'Python output appears here. Ctrl/⌘ + Enter runs the tests.';
         fill(panel, l.viz ? h('p.dim', {}, 'Run your code to bring this panel to life.') : h('p.dim', {}, 'No visual for this one: the tests are the feedback.'));
       } else if (k === 'quiz') renderQuiz(l);
@@ -277,10 +287,10 @@ export default {
     }
 
     el.append(h('.split', {}, nav,
-      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, crumb, title, text, explainBox, quizBox, editor, codeRow, results, term),
+      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, crumb, title, text, explainBox, quizBox, edBox, codeRow, results, term),
       sidePanel));
     open(lesson);
     getPy().catch(() => {}); // warm up in the background
-    return () => { alive = false; labCleanup?.(); explainCleanup?.(); };
+    return () => { alive = false; labCleanup?.(); explainCleanup?.(); cm.destroy(); };
   },
 };

@@ -72,6 +72,7 @@ kbd { font-family: var(--mono); font-size: 11px; background: var(--bg); border: 
 .term { background: #0a0c10; font-family: var(--mono); font-size: 12px; padding: 10px 12px; white-space: pre-wrap; overflow: auto; color: #b9c3d3; border-radius: 7px; border: 1px solid var(--line); min-height: 60px; max-height: 220px; }
 .chart { width: 100%; height: 150px; display: block; background: #0a0c10; border-radius: 7px; border: 1px solid var(--line); }
 .spark { width: 100%; height: 46px; display: block; background: #0a0c10; border-radius: 6px; }
+.code-editor { border: 1px solid var(--line); border-radius: 7px; overflow: hidden; flex: none; } .code-editor .cm-editor { min-height: 220px; max-height: 520px; font-size: 13px; } .code-editor .cm-scroller { font-family: var(--mono); line-height: 1.5; overflow: auto; } .code-editor .cm-editor.cm-focused { outline: none; }
 textarea.code { width: 100%; min-height: 220px; flex: 1; background: #0a0c10; color: #e3e8f1; border: 1px solid var(--line); border-radius: 7px; padding: 10px 12px; font-family: var(--mono); font-size: 13px; line-height: 1.5; resize: vertical; tab-size: 4; white-space: pre; }
 .lesson-nav button { display: block; width: 100%; text-align: left; background: transparent; color: var(--text); font-weight: 400; padding: 5px 8px; font-size: 13px; } .lesson-nav button.sel { background: var(--panel2); }
 .lesson-nav .unit { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin: 10px 8px 3px; }

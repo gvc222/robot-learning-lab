@@ -40,7 +40,7 @@ for (const l of lessons) {
       check('starter code fails with a readable message', await page.locator('.test.fail').count() > 0);
     }
     const sol = await page.evaluate(async (id) => (await import('./js/apps/academy.js')).ORDERED.find((x) => x.id === id).solution, l.id);
-    await page.fill('textarea.code', sol); await page.dispatchEvent('textarea.code', 'input');
+    await page.evaluate((c) => lab.setCode(c), sol);
     await page.click('#run-tests');
     await page.waitForFunction(() => document.querySelector('#run-tests').textContent === 'Run tests' && document.querySelector('.test'), null, { timeout: 90000 });
     const fails = await page.locator('.test.fail').allTextContents();
