@@ -8,13 +8,13 @@ export const COURSES7 = [
 
 export const MORE7 = [
   {
-    id: 'scenegen', course: 'pipeline', title: '1 · Generate a scene', viz: 'scenelab',
+    id: 'scenegen', course: 'pipeline', title: '1 · Generate a scene', viz: 'scenelab', knobs: [{ name: 'SPREAD', min: 0.6, max: 2, step: 0.1 }],
     text: `<p>Every robot-learning project starts with the world it learns in. A <b>scene generator</b> is a function from a random seed to a scene: where the objects are, how they are rotated, what they look like. The distribution it draws from <i>is</i> your task: too narrow and the policy memorises one layout, too wide (or unreachable) and nothing can solve it.</p>
 <p>Our scene is the SO-101-style arm with a red cube to put in the bin and a blue distractor. A scene is two cubes, each <code>(x, y, yaw)</code>: metres on the table and a rotation in radians. The rules:</p>
 <ul><li>Cubes must be <b>reachable</b>: x between 0.17 and 0.38, y between −0.02 and 0.26.</li><li>They must not touch: centres at least <code>MIN_GAP = 0.075</code> m apart.</li><li>Yaw is random in ±0.5 rad.</li><li>The <code>spread</code> argument scales the sampling box around the middle of the reachable area: 1.0 is the training distribution, larger values are harder, “out of distribution” test scenes (clamp to the reachable area so they stay solvable).</li><li>If no valid position is found after 50 tries, just keep the last one (never loop forever).</li><li>The same seed must give the same scene: reproducibility is what lets you re-run an evaluation later.</li></ul>
-${defined('<code>math</code>, <code>random</code>, <code>X_RANGE = (0.17, 0.38)</code>, <code>Y_RANGE = (-0.02, 0.26)</code>, <code>MIN_GAP = 0.075</code>. <b>You write</b> <code>sample_scene(rng, spread=1.0)</code>, where <code>rng</code> is a <code>random.Random</code> you draw from (<code>rng.uniform(a, b)</code>). Return <code>{"red": (x, y, yaw), "blue": (x, y, yaw)}</code>.')}
+${defined('<code>math</code>, <code>random</code>, <code>X_RANGE = (0.17, 0.38)</code>, <code>Y_RANGE = (-0.02, 0.26)</code>, <code>MIN_GAP = 0.075</code>, and <code>SPREAD = 1.0</code> (the bench passes it to your function; drag the <b>SPREAD</b> knob to see harder, wider scene distributions). <b>You write</b> <code>sample_scene(rng, spread=1.0)</code>, where <code>rng</code> is a <code>random.Random</code> you draw from (<code>rng.uniform(a, b)</code>). Return <code>{"red": (x, y, yaw), "blue": (x, y, yaw)}</code>.')}
 <p><b>Your task</b>: fill in the sampler. The bench draws 150 of your scenes from above, steps the 3D view through a few, and checks that the scripted expert can actually solve them.</p>`,
-    pre: 'import math, random\nX_RANGE = (0.17, 0.38)\nY_RANGE = (-0.02, 0.26)\nMIN_GAP = 0.075\n',
+    pre: 'import math, random\nX_RANGE = (0.17, 0.38)\nY_RANGE = (-0.02, 0.26)\nMIN_GAP = 0.075\nSPREAD = 1.0\n',
     starter: `def sample_scene(rng, spread=1.0):
     cx = (X_RANGE[0] + X_RANGE[1]) / 2
     cy = (Y_RANGE[0] + Y_RANGE[1]) / 2

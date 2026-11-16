@@ -4,7 +4,7 @@ const only = process.argv.slice(2);
 const { browser, page } = await open();
 await page.fill('#modal input', 'Tester'); await page.click('#modal button');
 await page.evaluate(() => { lab.state.guideOff = true; window.lab.openApp('academy'); });
-const lessons = await page.evaluate(async () => (await import('./js/apps/academy.js')).ORDERED.filter((l) => !l.quiz && l.kind !== 'lab' && l.solution).map((l) => ({ id: l.id, title: l.title })));
+const lessons = await page.evaluate(async () => (await import('./js/apps/academy.js')).ORDERED.filter((l) => !l.quiz && l.kind !== 'lab' && l.kind !== 'read' && l.solution).map((l) => ({ id: l.id, title: l.title })));
 let bad = 0;
 for (const l of lessons.filter((x) => !only.length || only.includes(x.id))) {
   await page.evaluate(async (id) => {

@@ -4,7 +4,7 @@ import { open } from './shot.mjs';
 const { browser, page, errors } = await open();
 await page.fill('#modal input', 'Tester'); await page.click('#modal button');
 await page.evaluate(() => { lab.state.guideOff = false; window.lab.openApp('academy'); });
-const lessons = await page.evaluate(async () => (await import('./js/apps/academy.js')).ORDERED.filter((l) => !l.quiz && l.kind !== 'lab').map((l) => ({ id: l.id, title: l.title })));
+const lessons = await page.evaluate(async () => (await import('./js/apps/academy.js')).ORDERED.filter((l) => !l.quiz && l.kind !== 'lab' && l.kind !== 'read').map((l) => ({ id: l.id, title: l.title })));
 let bad = 0;
 for (const l of lessons) {
   await page.evaluate(async (t) => {

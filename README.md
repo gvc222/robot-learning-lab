@@ -53,6 +53,17 @@ Orange sticky notes from your lead (the guide popups) walk you through each tick
 | ROB-21 | **Academy**: Perception, planning & ROS 2 | 3D rotation matrices and rigid-body transforms; back-project a depth image (ray-cast from MuJoCo's camera) into a point cloud and locate a cube; the Jacobian and damped-least-squares IK tracking a moving target; RRT motion planning around obstacles; ROS 2 concepts, then two nodes written against a small `rclpy`-shaped stand-in. |
 | ROB-22 | **Academy**: Train real policies | Behaviour cloning with a real neural network trained in the browser on MuJoCo demos (success on new layouts goes roughly 0/20 → 15/20 → 20/20 with 10, 20 and 40 demos); flow matching on a two-mode action distribution; a MuJoCo quadruped whose trot gait you write and improve with random search. |
 
+**Courses added later (not tied to a story ticket):**
+
+| Course | What you learn |
+| --- | --- |
+| **Simulation pipeline: scene to policy** | The whole loop in MuJoCo: write a scene generator, collect trajectories with noise injection and filtering, train with a learning-rate schedule and early stopping, run the policy closed-loop with post-processing and smoothing, evaluate offline (MSE, Spearman) and online (seeded rollouts, Wilson intervals, significance), then take it local (MuJoCo, LeRobot, GPU options). |
+| **Reinforcement learning, humanoid** | Design a reward for a MuJoCo humanoid and watch random search train a standing policy on it; a speed-only reward makes it lunge and fall. |
+| **Computer vision (CS231n companion)** | Convolution, kNN, a softmax classifier with a numerical gradient check, a tiny autograd, CNN size/parameter/receptive-field arithmetic, IoU and non-maximum suppression, with a roadmap to the real course. |
+| **A project per course** | Optional "Project" lessons with real commands for building outside the browser: PD control in MuJoCo, a randomized scene factory, Isaac Lab or Gym humanoid training, recording a LeRobot dataset, training ACT on your SO-101, a digital twin, a deployment harness, SLAM with Nav2, a ROS 2 pick pipeline, Diffusion Policy on PushT. |
+
+Lessons also have **live knobs**: drag a constant from your code (a gain, a noise level, a smoothing factor) and the lab bench re-runs.
+
 Progress lives in the browser; **Tickets → Your progress** downloads or loads a progress file. Every lesson has a feedback button that posts to a Google Sheet once you set `FEEDBACK_URL` ([setup](docs/feedback-sheet.md)), or opens a pre-filled GitHub issue otherwise.
 
 ## What is real and what is pretend
@@ -119,8 +130,8 @@ js/config.js          feedback endpoint and repo URL
 js/hw/feetech.js      Feetech STS3215 protocol over Web Serial (the SO-101 servos)
 js/hand/grasp.js      hand landmarks → features → Feix-33 grasp type; LEAP Hand retargeting
 js/course/explain.js  interactive explainers shown before each lesson's code (sliders, live MuJoCo)
-js/course/lessons*.js Academy curriculum: 11 courses, 68 lessons (code, quiz or lab)  ← add lessons here
-js/apps/labs2-6.js    interactive lab benches for the newer lessons
+js/course/lessons*.js Academy curriculum: 13 courses, 94 lessons (code, quiz or lab)  ← add lessons here
+js/apps/labs2-10.js    interactive lab benches for the newer lessons
 js/apps/*.js          one file per app (Academy, Teleop, Sandbox (Leader Arm, Hand Cam), Dataset, World Models, Train, Eval, Capstone, Tickets)
 vendor/               MuJoCo WASM, three.js, Pyodide, MediaPipe, Menagerie models (checked in; see vendor/README.md)
 tests/                headless checks (below)

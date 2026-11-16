@@ -82,7 +82,7 @@ function live(panel, sim, policyFor, { label = 'live rollout', h: ht = 230 } = {
 export const LABS7 = {
   async scenelab({ panel, ns }) {
     const sim = await getSim(), sample = ns.get('sample_scene'), R = ns.get('random').Random;
-    const scenes = []; for (let i = 0; i < 150; i++) scenes.push(toJs(sample(R(i), 1.0)));
+    const scenes = []; for (let i = 0; i < 150; i++) scenes.push(toJs(sample(R(i), Number(ns.get('SPREAD')))));
     const [, g] = canvas(panel, 340, 200); const X0 = 0.10, X1 = 0.45, Y0 = -0.10, Y1 = 0.34, sx = (x) => 10 + (x - X0) / (X1 - X0) * 320, sy = (y) => 190 - (y - Y0) / (Y1 - Y0) * 180;
     g.fillStyle = '#1b222d'; g.fillRect(10, 10, 320, 180);
     for (const s of scenes) { g.fillStyle = 'rgba(255,107,107,.7)'; g.fillRect(sx(s.red[0]) - 2, sy(s.red[1]) - 2, 4, 4); g.fillStyle = 'rgba(106,176,255,.7)'; g.fillRect(sx(s.blue[0]) - 2, sy(s.blue[1]) - 2, 4, 4); }

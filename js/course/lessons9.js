@@ -454,7 +454,7 @@ def nms(boxes, scores, thr):
     ],
   },
   {
-    id: 'proj_vision', course: 'vision', kind: 'read', title: '📖 CS231n roadmap and project',
+    id: 'proj_vision', course: 'vision', kind: 'read', title: 'CS231n roadmap and project',
     text: `<p>These six lessons are a companion, not a replacement: they re-derive the core ideas in plain Python so you can see every line. Stanford’s ${L('https://cs231n.stanford.edu/', 'CS231n')} (Convolutional Neural Networks for Visual Recognition) covers them properly, with videos and assignments, and its recent offerings run from linear classifiers up through CNNs, architectures, attention and transformers, detection and segmentation, video, and generative models. The lecture videos for the course are on YouTube and the notes are free.</p>
 <h3>How the lessons map to the course</h3>
 <ul><li><b>Convolution</b> and <b>CNN bookkeeping</b> → the lectures on convolutional networks and CNN architectures (batch normalization, transfer learning, AlexNet, VGG, ResNet).</li><li><b>Nearest neighbours</b> and <b>linear classifiers</b> → the first lectures (image classification, loss functions and optimization) and Assignment 1.</li><li><b>Autograd</b> → the neural networks and backpropagation lecture.</li><li><b>Detection</b> → the object detection and segmentation lecture.</li></ul>

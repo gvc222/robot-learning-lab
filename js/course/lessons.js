@@ -4,7 +4,7 @@ import { CONTROL_INTRO, CONTROL_MORE } from './lessons4.js';
 import { MORE5, COURSES5 } from './lessons5.js';
 import { MORE6 } from './lessons6.js';
 import { MORE7, COURSES7 } from './lessons7.js';
-import { MORE8 } from './lessons8.js';
+import { MORE8, MORE10 } from './lessons8.js';
 import { MORE9, COURSES9 } from './lessons9.js';
 // Academy curriculum. Each lesson: explanation, starter code, a reference solution, and tests.
 // Python lessons run in Pyodide (CPython compiled to WebAssembly); tests are plain asserts.
@@ -219,6 +219,7 @@ def _greedy_path(Q):
   ...MORE6,
   ...MORE7,
   ...MORE9,
+  ...MORE10,
   ...MORE8,
 ];
 

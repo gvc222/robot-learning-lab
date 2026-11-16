@@ -28,6 +28,8 @@ for (const l of lessons) {
       await page.click(`.quiz-opt[data-q="${qi}"][data-o="${wrong}"]`);
       await page.click(`.quiz-opt[data-q="${qi}"][data-o="${a}"]`);
     }
+  } else if (l.kind === 'read') { // explainers and projects: just mark as done
+    await page.click('#mark-read');
   } else if (l.kind === 'lab') { // the SO-101 motor bench
     await page.click('button:has-text("Run lerobot-find-port")'); await page.click('button:has-text("Unplug USB")');
     await page.click('button:text-is("Press Enter")'); // nothing connected -> error

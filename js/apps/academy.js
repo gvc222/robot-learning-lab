@@ -11,6 +11,7 @@ import { LABS5 } from './labs5.js';
 import { LABS6 } from './labs6.js';
 import { LABS7 } from './labs7.js';
 import { LABS9 } from './labs9.js';
+import { LABS10 } from './labs10.js';
 import { EXPLAIN } from '../course/explain.js';
 import { FEEDBACK_URL, REPO_URL } from '../config.js';
 import { EditorView, basicSetup, keymap, EditorState, Compartment, indentWithTab, indentUnit, python, xml, oneDark } from '../../vendor/codemirror/cm.js';
@@ -71,16 +72,18 @@ const LABS = {
     c.onclick = (e) => { const r = c.getBoundingClientRect(), k = 340 / r.width; target = [((e.clientX - r.left) * k - ox) / S, (oy - (e.clientY - r.top) * k) / S]; draw(); };
     draw(); return {};
   },
-  pcontrol({ panel, ns, ref }) {
+  async pcontrol({ panel, ns, ref }) {
+    const { replay3d } = await import('./labs4.js'), mjw = await loadMujoco();
+    const rp = replay3d(panel, mjw, '<mujoco><option gravity="0 0 0"/><worldbody><body><joint type="hinge" axis="0 0 1"/><geom type="box" pos="0.1 0 0" size="0.1 0.01 0.01" mass="0.5" contype="0" conaffinity="0"/></body></worldbody></mujoco>', { cam: [0.1, -0.05, 0.55], look: [0.1, 0, 0], label: 'your P controller, seen from above (target: 1 rad)' });
     const c = h('canvas.chart', { style: 'height:220px' }); panel.append(c, h('p.dim', { style: 'font-size:12px' }, 'Joint angle over 2 seconds with your KP (orange) against the target (grey).'));
     try {
       const f = ns.get('p_control'), kp = ns.get('KP'); let q = 0; const data = [0];
       for (let i = 0; i < 40; i++) { q += f(q, 1.0, kp) * 0.05; data.push(Math.max(-1, Math.min(3, q))); }
       const series = [{ data: data.map(() => 1), color: '#59647a' }, { data, color: '#ff9d3c' }];
       if (ref) { const rf = ref.get('p_control'), rk = ref.get('KP'); let rq = 0; const rd = [0]; for (let i = 0; i < 40; i++) { rq += rf(rq, 1.0, rk) * 0.05; rd.push(rq); } series.push({ data: rd, color: '#4fd08a' }); panel.append(h('p.dim', { style: 'font-size:12px' }, 'Green: the reference solution, for comparison.')); }
-      lineChart(c, series, { ymin: 0, ymax: Math.max(1.5, ...data) });
+      lineChart(c, series, { ymin: 0, ymax: Math.max(1.5, ...data) }); rp.set(data);
     } catch { /* tests already report the error */ }
-    return {};
+    return { cleanup: () => rp.cleanup() };
   },
   qlearn({ panel, ns }) {
     const returns = ns.get('returns')?.toJs?.(), path = ns.get('path')?.toJs?.();
@@ -176,6 +179,7 @@ const LABS = {
   ...LABS6,
   ...LABS7,
   ...LABS9,
+  ...LABS10,
 };
 
 

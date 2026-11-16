@@ -24,6 +24,18 @@ function runJoint(mj, xml, q0, steps, torque) {
   d.delete(); m.delete(); return out;
 }
 
+// A looping 3D replay of one hinge joint: the picture of what your controller did. Frames are joint angles (radians), played at about 30 fps.
+export function replay3d(panel, mj, xml, { cam, look, height = 170, label = 'replay' } = {}) {
+  const m = mj.MjModel.from_xml_string(xml), d = new mj.MjData(m);
+  const view = h('.view3d', { style: `height:${height}px;flex:none;border-radius:8px;overflow:hidden` }, h('.hud', {}, h('span.chip', {}, label)));
+  panel.append(view);
+  const viewer = new Viewer(view, { cam, look, minDist: 0.1, maxDist: 2 }); viewer.setSim({ model: m, data: d });
+  let frames = [0], i = 0, alive = true, raf, last = 0;
+  const loop = (t) => { if (!alive) return; raf = requestAnimationFrame(loop); if (t - last < 33) return; last = t; const q = frames[Math.min(i, frames.length - 1)]; d.qpos[0] = q; mj.mj_forward(m, d); viewer.draw(); i = (i + 1) % (frames.length + 15); };
+  raf = requestAnimationFrame(loop);
+  return { set(f) { frames = f.length ? f : [0]; i = 0; }, cleanup() { alive = false; cancelAnimationFrame(raf); viewer.dispose(); d.delete(); m.delete(); } };
+}
+
 export const LABS4 = {
   async pdlab({ panel, ns, pyOk }) {
     if (!pyOk) return {};
@@ -33,14 +45,15 @@ export const LABS4 = {
     const run = () => {
       const data = runJoint(mj, JOINT_XML, 0, 500, (q, v) => pd(q, v, 1.0, kp, kd));
       lineChart(chart, [{ data: data.map(() => 1), color: '#59647a' }, { data, color: '#ff9d3c' }], { ymin: 0, ymax: Math.max(1.4, ...data) });
-      const peak = Math.max(...data); info.textContent = `MuJoCo joint, 1 s, your pd_torque with kp ${kp.toFixed(1)}, kd ${kd.toFixed(3)}: overshoot ${Math.max(0, (peak - 1) * 100).toFixed(0)}%, final ${data.at(-1).toFixed(3)} rad.`;
+      rp.set(data); const peak = Math.max(...data); info.textContent = `MuJoCo joint, 1 s, your pd_torque with kp ${kp.toFixed(1)}, kd ${kd.toFixed(3)}: overshoot ${Math.max(0, (peak - 1) * 100).toFixed(0)}%, final ${data.at(-1).toFixed(3)} rad.`;
       return { peak, at: data[60] };
     };
+    const rp = replay3d(panel, mj, JOINT_XML, { cam: [0.1, -0.05, 0.55], look: [0.1, 0, 0], label: 'your PD controller, seen from above (target = straight right, 57°)' });
     panel.append(note('Your PD controller on a MuJoCo joint (inertia from the link’s real mass). The sliders rerun it with new gains.'), chart,
       slider('kp', { min: 0, max: 10, step: 0.1, value: kp, fmt: (v) => v.toFixed(1), on: (v) => { kp = v; run(); } })[0],
       slider('kd', { min: 0, max: 0.6, step: 0.005, value: kd, fmt: (v) => v.toFixed(3), on: (v) => { kd = v; run(); } })[0], info);
     const r = run();
-    return { tests: [['your KP/KD work on the MuJoCo joint too (< 5% overshoot)', r.peak < 1.05, `overshoot ${((r.peak - 1) * 100).toFixed(0)}%`]] };
+    return { tests: [['your KP/KD work on the MuJoCo joint too (< 5% overshoot)', r.peak < 1.05, `overshoot ${((r.peak - 1) * 100).toFixed(0)}%`]], cleanup: () => rp.cleanup() };
   },
 
   async pidlab({ panel, ns, py, pyOk }) {
@@ -57,14 +70,17 @@ export const LABS4 = {
       const out = Object.fromEntries(Object.entries(modes).map(([k, f]) => [k, runJoint(mj, PEND_XML, -0.3, 1500, f()).map((x) => x / D)]));
       lineChart(chart, [{ data: out.PD.map(() => 0), color: '#59647a' }, { data: out.PD, color: '#ff6b6b' }, { data: out.PID, color: '#6ab0ff' }, { data: out['PD + feed-forward'], color: '#4fd08a' }], { ymin: -20, ymax: 10 });
       info.textContent = Object.entries(out).map(([k, d]) => `${k}: ${d.at(-1).toFixed(1)}°`).join(' · ');
+      last = out; rp.set(out[mode].map((x) => x * D));
       return out;
     };
-    panel.append(note('Holding a 150 g link level in MuJoCo for 3 s. Red PD (sags), blue PID, green PD + gravity feed-forward. All three use your functions.'), chart,
+    const rp = replay3d(panel, mj, PEND_XML, { cam: [0.0, -0.45, 0.02], look: [0.06, 0, 0], label: 'the link, side view (level = 0°)' }); let mode = 'PD';
+    const modeSel = h('select', { onchange: (e) => { mode = e.target.value; if (last) rp.set(last[mode].map((x) => x * D)); } }, ['PD', 'PID', 'PD + feed-forward'].map((k) => h('option', {}, k))); let last = null;
+    panel.append(h('label', { style: 'font-size:12.5px' }, 'Watch the 3D link under ', modeSel), note('Holding a 150 g link level in MuJoCo for 3 s. Red PD (sags), blue PID, green PD + gravity feed-forward. All three use your functions.'), chart,
       slider('kp', { min: 0.2, max: 6, step: 0.1, value: kp, fmt: (v) => v.toFixed(1), on: (v) => { kp = v; run(); } })[0],
       slider('ki', { min: 0, max: 15, step: 0.5, value: ki, fmt: (v) => v.toFixed(1), on: (v) => { ki = v; run(); } })[0],
       slider('kd', { min: 0, max: 0.3, step: 0.005, value: kd, fmt: (v) => v.toFixed(3), on: (v) => { kd = v; run(); } })[0], info);
     const o = run();
-    return { tests: [['in MuJoCo, PID and feed-forward hold the link level (< 1°)', Math.abs(o.PID.at(-1)) < 1 && Math.abs(o['PD + feed-forward'].at(-1)) < 1, info.textContent]] };
+    return { tests: [['in MuJoCo, PID and feed-forward hold the link level (< 1°)', Math.abs(o.PID.at(-1)) < 1 && Math.abs(o['PD + feed-forward'].at(-1)) < 1, info.textContent]], cleanup: () => rp.cleanup() };
   },
 
   async armlab({ panel, ns, pyOk }) {
