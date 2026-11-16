@@ -11,7 +11,7 @@ export default {
         h('p.dim', {}, 'Work top to bottom. Tickets close themselves when the work is done.'),
         TICKETS.map((t, i) => {
           const done = t.done(), isActive = active?.id === t.id;
-          const header = t.week === 2 && TICKETS[i - 1]?.week !== 2 ? h('h3', { style: 'margin:22px 0 8px' }, 'Week 2 · research tools') : null;
+          const header = t.week && TICKETS[i - 1]?.week !== t.week ? h('h3', { style: 'margin:22px 0 8px' }, { 2: 'Week 2 · research tools', 3: 'Week 3 · twins, deployment, mobile, hands' }[t.week]) : null;
           return [header, h(`.ticket${done ? '.done' : ''}${isActive ? '.active' : ''}`, {},
             h('.id', {}, t.id),
             h('div', { style: 'flex:1' }, h('b', {}, t.title), t.optional ? h('span.chip', { style: 'margin-left:8px' }, 'optional') : null,

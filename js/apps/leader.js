@@ -123,7 +123,7 @@ export default {
     }
 
     function toggleRec() {
-      if (rec) { lastEp = rec; rec = null; recBtn.textContent = '● Record episode'; $('#l-rec').hidden = true; dlBtn.hidden = false; toast(`Episode saved: ${lastEp.frames.length} frames`); return; }
+      if (rec) { lastEp = rec; rec = null; state.seen.leaderEpisode = true; save(); recBtn.textContent = '● Record episode'; $('#l-rec').hidden = true; dlBtn.hidden = false; toast(`Episode saved: ${lastEp.frames.length} frames`); return; }
       rec = { robot_type: 'so101_follower', fps: HZ, source, joints: JOINTS, frames: [] };
       recBtn.textContent = '■ Stop'; $('#l-rec').hidden = false; dlBtn.hidden = true;
     }

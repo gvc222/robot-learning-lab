@@ -200,6 +200,46 @@ check('capstone can be completed (with SmolVLA)', cap.done && cap.best === 'cap/
 await page.waitForTimeout(500); await page.screenshot({ path: `${shots}/capstone.png` });
 await app('tickets'); await page.screenshot({ path: `${shots}/tickets.png` });
 
+log('Leader Arm (mock SO-101 on a fake serial port)');
+await page.evaluate(() => {
+  // Emulates six STS3215 servos: answers READ (0x02) of Present_Position and acknowledges WRITE (0x03).
+  const pos = { 1: 2147, 2: 1500, 3: 2600, 4: 2300, 5: 2047, 6: 2600 };
+  let push;
+  const readable = new ReadableStream({ start(c) { push = (b) => c.enqueue(b); } });
+  const writable = new WritableStream({ write(b) {
+    const id = b[2], inst = b[4];
+    const params = inst === 2 ? [pos[id] & 0xff, pos[id] >> 8] : [];
+    const len = params.length + 2; let sum = id + len; for (const x of params) sum += x;
+    push(Uint8Array.from([0xff, 0xff, id, len, 0, ...params, ~sum & 0xff]));
+  } });
+  const port = { open: async () => {}, close: async () => {}, readable, writable };
+  Object.defineProperty(navigator, 'serial', { value: { requestPort: async () => port }, configurable: true });
+});
+await app('leader');
+await page.waitForFunction(() => document.querySelector('#l-status')?.textContent === 'sliders', null, { timeout: 60000 });
+await page.click('#l-connect');
+await page.waitForFunction(() => /2147/.test(document.querySelector('.side.right table')?.textContent || ''), null, { timeout: 10000 });
+const panDeg = await page.evaluate(() => [...document.querySelectorAll('.side.right table tr')][1].children[2].textContent);
+check('leader arm read over serial and mapped to degrees', panDeg === '9°', panDeg);
+await page.click('#l-recbtn'); await page.waitForTimeout(700); await page.click('#l-recbtn');
+check('leader episode recorded', await page.locator('#l-dl').isVisible());
+await page.screenshot({ path: `${shots}/leader.png` });
+await page.click('#l-connect');
+
+log('Hand Cam (demo poses)');
+await app('handcam');
+await page.waitForFunction(() => document.querySelector('#hc-status')?.textContent.startsWith('LEAP'), null, { timeout: 60000 });
+let handOk = 0;
+for (const i of [0, 8, 15, 19, 29]) {
+  await page.selectOption('#hc-demo', String(i)); await page.waitForTimeout(250);
+  const top = await page.locator('#hc-result b').first().textContent();
+  if (Number(top) === i + 1) handOk++;
+}
+check('grasp detector labels demo poses', handOk === 5, `${handOk}/5`);
+await page.click('#hc-logbtn');
+check('grasp logged', /Download log/.test(await page.textContent('#hc-log')));
+await page.screenshot({ path: `${shots}/handcam.png` });
+
 const real = errors.filter((e) => !/google|favicon/.test(e));
 check('no console or page errors', real.length === 0, real.slice(0, 5).join('\n'));
 await browser.close(); server.close();

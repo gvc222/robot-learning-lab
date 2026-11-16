@@ -53,6 +53,22 @@ export const TICKETS = [
   { id: 'ROB-15', title: 'Ship your data to LeRobot', app: 'dataset', week: 2,
     desc: 'Export your kept episodes as a LeRobotDataset bundle you can train with the real LeRobot.',
     done: () => !!state.seen.exported },
+  // ── Week 3: real objects, real deployments ──
+  { id: 'ROB-16', title: 'Build a digital twin', app: 'academy', week: 3,
+    desc: 'Scan or CAD a real object, fix the mesh, compute its inertia, measure its friction on a tilting board.',
+    done: () => courseDone(['twin']), progress: () => courseCount('twin') },
+  { id: 'ROB-17', title: 'Run the coffee shift', app: 'academy', week: 3,
+    desc: 'A long-horizon task with slippery cups: recover from drops, blend between skills, curate failure data.',
+    done: () => courseDone(['deploy']), progress: () => courseCount('deploy') },
+  { id: 'ROB-18', title: 'Deliver the food', app: 'academy', week: 3,
+    desc: 'Mobile robots: wheels and car models, odometry and Kalman filters, lidar mapping, A*, then three deliveries with pure pursuit.',
+    done: () => courseDone(['mobile']), progress: () => courseCount('mobile') },
+  { id: 'ROB-19', title: 'Label grasps with your own hand', app: 'handcam', week: 3,
+    desc: 'Teleoperate the LEAP Hand from your webcam (or demo poses) and log 3 different Feix grasp types.',
+    done: () => (state.seen.grasps || []).length >= 3, progress: () => `${(state.seen.grasps || []).length}/3 grasp types` },
+  { id: 'ROB-20', title: 'Plug in a real leader arm', app: 'leader', week: 3, optional: true,
+    desc: 'Optional, needs an SO-101 leader and Chrome: connect it over USB, load your calibration, record an episode.',
+    done: () => !!state.seen.leaderEpisode },
 ];
 
 export const activeTicket = () => TICKETS.find((t) => !t.optional && !t.done());
@@ -82,6 +98,11 @@ export const BRIEFINGS = {
   'ROB-13': [['Dev', 'Our SO-101 kits arrived. Before you touch one, do the <b>Build an SO-101</b> course: motor IDs, calibration and both kinds of camera calibration.']],
   'ROB-14': [['Maya', 'Reading group this week: the <b>CoRL 2026</b> award finalists, reviewed hands-on. SuperMimic took Best Paper. Bring opinions.']],
   'ROB-15': [['Maya', 'Last one: <b>export</b> your kept demos as a LeRobotDataset so the real-robot team can train on them.']],
+  'ROB-16': [['Dev', 'Week 3: the cafe pilot. Sim cups don’t behave like ours. Do the <b>Digital twins</b> course and measure friction the old-fashioned way.']],
+  'ROB-17': [['Maya', 'The cafe wants a full shift, not a pick-and-place. Cups slip. Write the <b>coffee shift</b> so it recovers, and sort the logs before anyone trains on them.']],
+  'ROB-18': [['Maya', 'Second pilot: sidewalk delivery. Start with wheels and Kalman filters; mapping is inside the course, no separate SLAM course needed.']],
+  'ROB-19': [['Dev', 'The dexterous-hand team wants grasp labels. Open <b>Hand Cam</b>, show it a few grasps, and log 3 different types.']],
+  'ROB-20': [['Dev', 'If you have an SO-101 leader at home, the <b>Leader Arm</b> station reads it straight from Chrome. Totally optional.']],
   'ROB-8': [['Maya', 'You are onboarded. We have a demo on Friday and it is yours. The brief is in <b>Capstone</b>. Different robot, two task languages, real constraints. Good luck!'],
     ['Dev', 'Ping me (the request button in Dataset) if you need operator hours. They are not free.']],
 };
@@ -141,5 +162,13 @@ export const GUIDE = {
   ],
   'ROB-15': [
     { app: 'dataset', sel: '#export-btn', text: 'Export your kept episodes. The zip includes a Python script that rebuilds them as a real LeRobotDataset.' },
+  ],
+  'ROB-19': [
+    { app: 'handcam', sel: '#hc-cam', text: 'Start the webcam (or pick a <b>preset pose</b> below). The detector shows its top 3 Feix grasp types.' },
+    { app: 'handcam', sel: '#hc-logbtn', text: 'Hold a grasp and press <b>Log this grasp</b>. Log 3 different types.' },
+  ],
+  'ROB-20': [
+    { app: 'leader', sel: '#l-connect', text: 'Plug in the leader arm and connect. No arm? The sliders drive the same sim.' },
+    { app: 'leader', sel: '#l-recbtn', text: 'Record an episode while you move the arm.' },
   ],
 };

@@ -1,7 +1,7 @@
 // Hand Cam: teleoperate a simulated dexterous hand (MuJoCo Menagerie's LEAP Hand) with your webcam,
 // and watch an automatic grasp-type detector label your hand against the 33 Feix GRASP types.
 // Hand tracking: MediaPipe Hand Landmarker, running locally in the browser (the video never leaves the laptop).
-import { h, fill, $, toast } from '../util.js';
+import { h, fill, $, toast, state, save } from '../util.js';
 import { loadMujoco } from '../sim/sim.js';
 import { stageModel, idOf } from '../sim/menagerie.js';
 import { Viewer } from '../sim/viewer.js';
@@ -59,6 +59,7 @@ export default {
     function logGrasp() {
       if (!top.length) return;
       log.push({ t: new Date().toLocaleTimeString(), ...top[0], top3: top.map((r) => r.id), source, landmarks: L.map((p) => p.map((v) => +v.toFixed(4))) });
+      state.seen.grasps = [...new Set([...(state.seen.grasps || []), top[0].id])]; save();
       renderLog(); toast(`Logged: ${top[0].name}`);
     }
 

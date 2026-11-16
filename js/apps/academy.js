@@ -5,6 +5,7 @@ import { Sim, loadMujoco, CONTROL_DT, rng, sampleLayout } from '../sim/sim.js';
 import { Rollout, DEMO_KINDS } from '../sim/operator.js';
 import { trueSubtasks } from '../annotate.js';
 import { NEW_LABS } from './labs2.js';
+import { LABS3 } from './labs3.js';
 import { Viewer } from '../sim/viewer.js';
 
 let pyPromise = null;
@@ -155,6 +156,7 @@ const LABS = {
     return { tests, cleanup: () => { cancelAnimationFrame(raf); viewer.dispose(); sim.dispose(); } };
   },
   ...NEW_LABS,
+  ...LABS3,
 };
 
 
