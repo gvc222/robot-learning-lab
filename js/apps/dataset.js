@@ -6,6 +6,8 @@ import { truthOf, isKeeper } from '../models.js';
 import { trueSubtasks, autoLabel, captionsFor } from '../annotate.js';
 import { makeZip, dataUrlBytes } from '../zip.js';
 import { Viewer } from '../sim/viewer.js';
+import { WORLD_MODELS, WM_ALIASES } from '../sim/dreams.js';
+const WMNAME = (id) => (WORLD_MODELS[id] || WORLD_MODELS[WM_ALIASES[id]])?.name.split(' (')[0].split(',')[0] || 'world model';
 
 const OPERATORS = ['ana', 'kofi', 'lin', 'tomás'];
 const WHY = { ...Object.fromEntries(Object.entries(DEMO_KINDS).map(([k, v]) => [k, v.why])) };
@@ -74,7 +76,7 @@ export default {
       const eps = visible(), unl = eps.filter((e) => !e.label).length;
       $('#d-count').textContent = `${eps.length} episodes · ${unl} unlabeled · ${eps.filter((e) => e.label === 'keep').length} kept · ${eps.filter((e) => e.subtasks?.length).length} annotated`;
       fill(list, ...eps.map((e) => h('button' + (e === cur ? '.sel' : ''), { onclick: () => select(e) },
-        h('span', {}, `${e.id} `, h('span.dim', {}, `${e.source} · ${e.task}`), e.subtasks?.length ? h('span', { title: 'annotated' }, ' 🏷') : null),
+        h('span', {}, `${e.id} `, h('span.dim', {}, `${e.source === 'dream' ? 'generated' : e.source} · ${e.task}`), e.subtasks?.length ? h('span', { title: 'annotated' }, ' 🏷') : null),
         h('span', { class: e.label === 'keep' ? 'k' : e.label === 'discard' ? 'x' : 'dim' }, e.label === 'keep' ? 'keep' : e.label === 'discard' ? 'discard' : '•'))));
       const first = !qaPool().length;
       genBtn.textContent = first ? 'Pull night-shift demos (24)' : 'Request 12 more (2 operator-h)';
@@ -93,7 +95,7 @@ export default {
       scrub.max = e.frames.length - 1;
       lang.textContent = `“${TASKS[e.task].text}”`;
       const m = e.metrics, chip = (t, cls = '') => h('span.chip' + cls, {}, t);
-      fill(metrics, chip(e.source === 'dream' ? `neural trajectory · ${e.wm || 'world model'}` : `operator: ${e.source}`), chip(`duration ${m.duration}s`, m.duration > 11 ? '.warn' : ''), chip(`path ${m.path} m`),
+      fill(metrics, chip(e.source === 'dream' ? `generated · ${WMNAME(e.wm)}` : `operator: ${e.source}`), chip(`duration ${m.duration}s`, m.duration > 11 ? '.warn' : ''), chip(`path ${m.path} m`),
         chip(`idle ${m.idle}%`, m.idle > 30 ? '.warn' : ''), chip(`smoothness ${m.smooth}/100`, m.smooth < 45 ? '.warn' : ''),
         e.outcome ? chip(`auto outcome ${e.outcome}/5`, e.outcome >= 4 ? '.good' : e.outcome <= 2 ? '.bad' : '.warn') : null,
         e.revealed ? chip(`QA truth: ${truthOf(e)}`, isKeeper(e) ? '.good' : '.bad') : null);

@@ -104,11 +104,11 @@ await page.screenshot({ path: `${shots}/eval.png` });
 log('   rows:', JSON.stringify(await page.evaluate(() => lab.state.evals[0].rows.map((r) => [r.name, r.success, +r.time.toFixed(1), Math.round(r.smooth)]))));
 check('ROB-6 closes', await page.evaluate(() => !!lab.state.tickets['ROB-6']));
 
-log('Week 2: Dream Lab');
+log('Week 2: World Models');
 await page.evaluate(() => { lab.state.guideOff = true; });
 await app('dreams'); await page.waitForFunction(() => document.querySelector('#w-status')?.textContent.includes('live'), null, { timeout: 30000 });
 await page.click('#w-snap'); await page.click('#w-snap');
-await page.selectOption('#w-wm select', 'cosmos_lora');
+await page.selectOption('#w-wm select', 'video_lora');
 const tuneBtn = page.locator('#w-wm button');
 check('LoRA fine-tune needs enough real demos', await tuneBtn.count() === 1);
 await tuneBtn.click();

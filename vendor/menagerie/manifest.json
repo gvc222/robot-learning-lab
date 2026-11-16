@@ -1,4 +1,23 @@
 {
+ "i2rt_yam": [
+  "model2.stl",
+  "model2__10.stl",
+  "model2__11.stl",
+  "model2__12.stl",
+  "model2__13.stl",
+  "model2__14.stl",
+  "model2__15.stl",
+  "model2__16.stl",
+  "model2__17.stl",
+  "model2__2.stl",
+  "model2__3.stl",
+  "model2__4.stl",
+  "model2__5.stl",
+  "model2__6.stl",
+  "model2__7.stl",
+  "model2__8.stl",
+  "model2__9.stl"
+ ],
  "leap_hand": [
   "base.stl",
   "distal.stl",

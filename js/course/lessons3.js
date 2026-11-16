@@ -120,7 +120,7 @@ def inertial_xml(m, I):
     ],
   },
   {
-    id: 'twinfriction', course: 'twin', title: 'Measure friction with a tilting board', viz: 'incline',
+    id: 'twinfriction', course: 'twin', title: 'Measure friction with a tilting board', viz: 'incline', explain: 'inclinefbd',
     text: `<p>Friction decides whether a grasp holds and whether a pushed object slides or tips, and nobody knows its value for your mug on your table. Measure it with the oldest trick in physics: put the object on a board and tilt slowly until it slides.</p>
 <p>At the moment of slipping, gravity along the slope (<code>m g sin θ</code>) equals the maximum static friction (<code>μ m g cos θ</code>), so <b>μ = tan θ</b>. Use your phone’s level app for θ, repeat a few times, and use the <b>median</b> so one jerky tilt does not ruin it.</p>
 <p><b>Your task</b>: write <code>mu_from_angle(deg)</code> and <code>estimate_mu(angles_deg)</code> (median of the per-trial μ). The lab then builds a real tilting-board experiment in MuJoCo with an object whose friction is hidden, runs 5 trials, feeds you the slip angles, and checks your estimate against the truth. Your number goes straight into the object’s <code>friction="μ 0.005 0.0001"</code>.</p>`,
@@ -160,7 +160,7 @@ def estimate_mu(angles_deg):
 
   // ───────────────────────── Deployment: the coffee shift ─────────────────────────
   {
-    id: 'deployintro', course: 'deploy', title: 'Why long tasks fail', kind: 'quiz',
+    id: 'deployintro', course: 'deploy', title: 'Why long tasks fail', kind: 'quiz', explain: 'compound',
     text: `<p>Pick-and-place demos hide a brutal fact: steps multiply. If each of 6 steps succeeds 95% of the time and nothing recovers, the whole task succeeds 0.95⁶ ≈ <b>74%</b>; at 20 steps, 36%. A cafe robot making 200 drinks a day would fail dozens of times.</p>
 <p>Deployed systems fight this three ways:</p>
 <ul><li><b>Structure</b>: break the task into skills (pick, place, press) and sequence them with a state machine or behavior tree, checking a condition after every step.</li>
@@ -217,7 +217,7 @@ def estimate_mu(angles_deg):
     tests: [['serve(robot) is defined', `assert callable(serve)`]],
   },
   {
-    id: 'deploysmooth', course: 'deploy', title: 'Smooth transitions between skills', viz: 'blend',
+    id: 'deploysmooth', course: 'deploy', title: 'Smooth transitions between skills', viz: 'blend', explain: 'minjerk',
     text: `<p>Watch the coffee robot: it stops dead at every waypoint, “above the cup”, “at the cup”, “above the machine”. Each stop costs time and each start is a jerk that sloshes coffee. Two standard fixes:</p>
 <ul><li><b>Minimum-jerk motion</b> within a move: <code>s(τ) = 10τ³ − 15τ⁴ + 6τ⁵</code> for τ from 0 to 1, which starts and ends with zero velocity and zero acceleration (it is also how human reaching moves, per Flash & Hogan, 1985).</li>
 <li><b>Blending</b> between moves: don’t stop exactly at an intermediate waypoint. Start curving toward the next one when you get within a blend radius. Industrial arm languages call it a blend radius or zone; the robot never fully stops until the final point.</li></ul>
@@ -308,7 +308,7 @@ def via(points, n_per_seg, blend):
     ],
   },
   {
-    id: 'diffdrive', course: 'mobile', title: 'Differential drive kinematics',
+    id: 'diffdrive', course: 'mobile', title: 'Differential drive kinematics', explain: 'diffarc',
     text: `<p>Most indoor and sidewalk robots steer like a wheelchair: two driven wheels on one axle, a caster for balance. Spin both wheels forward and it drives straight; spin them differently and it turns.</p>
 <p>With wheel radius <code>r</code>, track width <code>T</code> (distance between wheels) and wheel speeds ω<sub>L</sub>, ω<sub>R</sub> in rad/s:</p>
 <p><code>v = r(ω_R + ω_L)/2</code> and <code>ω = r(ω_R − ω_L)/T</code>.</p>
@@ -341,7 +341,7 @@ def integrate(pose, v, w, dt):
     ],
   },
   {
-    id: 'bicycle', course: 'mobile', title: 'How cars steer: the bicycle model',
+    id: 'bicycle', course: 'mobile', title: 'How cars steer: the bicycle model', explain: 'bicycle',
     text: `<p>Cars cannot turn in place. They use <b>Ackermann steering</b>: the front wheels turn, at slightly different angles so both roll around the same centre. For planning and control, automotive engineers collapse the four wheels into one front and one rear wheel on the centreline: the <b>kinematic bicycle model</b>.</p>
 <p>With wheelbase L, steering angle δ and speed v (rear-axle reference):</p>
 <p><code>ẋ = v cos θ</code>, <code>ẏ = v sin θ</code>, <code>θ̇ = v tan δ / L</code>, so the turning radius is <b>R = L / tan δ</b>.</p>
@@ -376,7 +376,7 @@ def bicycle_step(state, v, delta, L, dt):
     ],
   },
   {
-    id: 'kalman', course: 'mobile', title: 'Odometry drifts, GPS jumps: the Kalman filter', viz: 'kalman',
+    id: 'kalman', course: 'mobile', title: 'Odometry drifts, GPS jumps: the Kalman filter', viz: 'kalman', explain: 'kalmanviz',
     text: `<p>Wheel odometry is smooth but drifts: a wheel slips, the radius is a bit off, and errors add up forever. GPS (or any absolute fix) never drifts but is noisy, jumping ±1–3 m. Cars fuse both, and the classic tool is the <b>Kalman filter</b>.</p>
 <p>In 1D (position along a street), keep an estimate x and its variance P. Each step:</p>
 <ol><li><b>Predict</b> with odometry: <code>x = x + u</code>, <code>P = P + Q</code> (uncertainty grows by the odometry noise Q).</li><li><b>Update</b> with a measurement z of noise variance R: gain <code>K = P/(P+R)</code>, then <code>x = x + K(z − x)</code>, <code>P = (1 − K)P</code>.</li></ol>
@@ -511,7 +511,7 @@ def occupied(l):
     ],
   },
   {
-    id: 'delivery', course: 'mobile', title: '🛵 Capstone: deliver the food', viz: 'delivery',
+    id: 'delivery', course: 'mobile', title: '🛵 Capstone: deliver the food', viz: 'delivery', explain: 'lookahead',
     text: `<p>Three orders are ready at the restaurant (orange). Deliver to customers A, B and C (green) in the MuJoCo city, then you’re done. Your A* from the last lesson plans the route (it is pre-loaded); you write the <b>controller</b> that follows it.</p>
 <p><b>Pure pursuit</b> (Coulter, CMU, 1992) is the classic path follower from autonomous cars: pick the point on the path one <b>lookahead distance</b> ahead of you, and steer along the circular arc that passes through it. In the robot’s frame, with that point at lateral offset <code>y_r</code> and distance <code>ℓ</code>, the arc’s curvature is <code>κ = 2·y_r / ℓ²</code>, so <code>ω = v·κ</code>. Short lookahead: tight tracking but wobbly; long: smooth but cuts corners into buildings.</p>
 <p>Pure pursuit was built for cars, which can’t turn in place. A differential-drive robot can, and should when the target is beside or behind it (at the start of a leg, or at a T-junction). Otherwise it arcs wide into a building.</p>

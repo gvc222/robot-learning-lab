@@ -1,11 +1,12 @@
 import { MORE } from './lessons2.js';
 import { MORE3, COURSES3 } from './lessons3.js';
+import { CONTROL_INTRO, CONTROL_MORE } from './lessons4.js';
 // Academy curriculum. Each lesson: explanation, starter code, a reference solution, and tests.
 // Python lessons run in Pyodide (CPython compiled to WebAssembly); tests are plain asserts.
 // `pre` runs before the learner's code. `viz` names a visualisation in apps/academy.js.
 
 export const COURSES = [
-  { id: 'basics', title: 'Robot basics', blurb: 'Joint angles, kinematics and your first control loop.' },
+  { id: 'basics', title: 'Robot basics & control', blurb: 'Real robots, joint angles, kinematics, then control loops from P to a whole arm.' },
   { id: 'sim', title: 'Simulation & sim-to-real', blurb: 'Build MuJoCo worlds, script a pick, survive the reality gap.' },
   { id: 'rl', title: 'Reinforcement learning', blurb: 'Rewards, Q-learning, random search and reward models.' },
   { id: 'data', title: 'Data, language & human video', blurb: 'Subtasks, captions, egocentric pretraining, eval statistics, LeRobot export.' },
@@ -15,25 +16,26 @@ export const COURSES = [
 ];
 const UNIT_COURSE = { 1: 'basics', 2: 'sim', 3: 'rl' };
 
-const PY_ARM = 'import math\nL1 = 0.22\nL2 = 0.22\n';
+const PY_ARM = 'import math\nL1 = 0.116   # SO-101 upper arm (m), measured from its MuJoCo model\nL2 = 0.135   # SO-101 forearm\n';
 
 export const LESSONS = [
   {
-    id: 'state', unit: 1, course: 'basics', title: 'Describe a robot with numbers',
+    id: 'state', unit: 1, course: 'basics', title: 'Describe a robot with numbers', explain: 'robot3d',
     text: `<p>A robot arm is a chain of <b>links</b> connected by <b>joints</b>. If you know the angle of every joint, you know exactly where the whole arm is. That list of numbers is called the <b>joint state</b> (or <i>configuration</i>).</p>
-<p>Our desktop arm, Sprout, has 4 joints: base yaw, shoulder, elbow and wrist. Angles are measured in <b>radians</b>.</p>
-<p><b>Your task</b></p><ol><li>Make a list called <code>joint_angles</code> with four numbers (any values you like).</li><li>Set <code>gripper_open</code> to <code>True</code>.</li><li>Set <code>num_joints</code> using <code>len(...)</code>, not by typing 4.</li></ol>`,
-    starter: `# The robot's state: one angle per joint, in radians\njoint_angles = [0.0, 0.5, ...]\n\ngripper_open = ...\n\nnum_joints = ...\n\nprint("joints:", joint_angles)\n`,
-    solution: `joint_angles = [0.0, 0.5, 1.2, 1.44]\ngripper_open = True\nnum_joints = len(joint_angles)\nprint("joints:", joint_angles)\n`,
+<p>Above is a real, widely used arm: the open-source <b>SO-101</b> from LeRobot, loaded from its MuJoCo model. Drag the sliders: each one is a joint, and the list underneath is the robot’s joint state, in <b>radians</b>. It has 6 numbers: shoulder pan, shoulder lift, elbow flex, wrist flex, wrist roll and the gripper. Switch to <b>YAM</b> (a larger research arm) to compare, or load your own robot’s URDF or MJCF (select the file together with its mesh files).</p>
+<p>Why not a made-up “dummy” arm? Simple toy arms are handy for deriving formulas (we use a two-link one in the next lessons), but the numbers you learn here should match a robot you can actually buy, build and download data for. So the lessons use the SO-101’s real link lengths.</p>
+<p><b>Your task</b></p><ol><li>Make a list called <code>joint_angles</code> with one number per SO-101 joint (6), for example copied from the widget.</li><li>Set <code>gripper_open</code> to <code>True</code>.</li><li>Set <code>num_joints</code> using <code>len(...)</code>, not by typing 4.</li></ol>`,
+    starter: `# The SO-101's state: one angle per joint, in radians\n# shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper\njoint_angles = [0.0, -0.5, ...]\n\ngripper_open = ...\n\nnum_joints = ...\n\nprint("joints:", joint_angles)\n`,
+    solution: `joint_angles = [0.0, -0.5, 0.8, 0.3, 0.0, 0.2]\ngripper_open = True\nnum_joints = len(joint_angles)\nprint("joints:", joint_angles)\n`,
     hint: 'Replace every <code>...</code>. A list looks like <code>[0.0, 0.5, 1.2, 1.4]</code>.',
     tests: [
-      ['joint_angles is a list of 4 numbers', `assert isinstance(joint_angles, list), "joint_angles should be a list"\nassert len(joint_angles) == 4, "Sprout has 4 joints, you gave %d" % len(joint_angles)\nassert all(isinstance(q, (int, float)) for q in joint_angles), "every angle must be a number"`],
+      ['joint_angles is a list of 6 numbers', `assert isinstance(joint_angles, list), "joint_angles should be a list"\nassert len(joint_angles) == 6, "the SO-101 has 6 joints (5 + gripper), you gave %d" % len(joint_angles)\nassert all(isinstance(q, (int, float)) for q in joint_angles), "every angle must be a number"`],
       ['gripper_open is True', `assert gripper_open is True`],
-      ['num_joints is computed with len()', `assert num_joints == len(joint_angles) == 4`],
+      ['num_joints is computed with len()', `assert num_joints == len(joint_angles) == 6`],
     ],
   },
   {
-    id: 'radians', unit: 1, course: 'basics', title: 'Degrees to radians',
+    id: 'radians', unit: 1, course: 'basics', title: 'Degrees to radians', explain: 'unitcircle',
     text: `<p>Humans think in degrees; robot software thinks in radians. A full turn is 360° = 2π radians, so</p><p class="mono">radians = degrees × π / 180</p>
 <p><b>Your task</b>: finish <code>deg_to_rad</code>, then use it to set <code>elbow</code> to 45 degrees.</p>`,
     pre: 'import math\n',
@@ -47,9 +49,10 @@ export const LESSONS = [
     ],
   },
   {
-    id: 'fk', unit: 1, course: 'basics', title: 'Forward kinematics', viz: 'fk',
+    id: 'fk', unit: 1, course: 'basics', title: 'Forward kinematics', viz: 'fk', explain: 'armfk',
     text: `<p><b>Forward kinematics</b> answers: <i>given the joint angles, where is the hand?</i></p>
-<p>Take a flat arm with two links of length <code>L1</code> and <code>L2</code>. The first link points at angle θ₁. The second link is attached to its tip and bends a further θ₂, so it points at θ₁ + θ₂. Add the two links tip to tail:</p>
+<p>Look at the SO-101 from the side: shoulder lift, elbow flex and wrist flex all bend in the same vertical plane, so in that plane it is a <b>planar arm</b>. In the widget, move θ₁ and θ₂ and watch the formula update; switch to YAM, or build a custom arm and add links (the sum just gets more terms).</p>
+<p>Take the first two links, lengths <code>L1</code> and <code>L2</code> (the SO-101’s are 0.116 m and 0.135 m). The first link points at angle θ₁. The second link is attached to its tip and bends a further θ₂, so it points at θ₁ + θ₂. Add the two links tip to tail:</p>
 <p class="mono">x = L1·cos(θ₁) + L2·cos(θ₁ + θ₂)<br>y = L1·sin(θ₁) + L2·sin(θ₁ + θ₂)</p>
 <p><b>Your task</b>: finish <code>fk</code>. <code>L1</code>, <code>L2</code> and <code>math</code> are already defined. The picture on the right draws the true arm in grey and <span style="color:var(--accent)">your answer as an orange dot</span>: it should ride on the fingertip.</p>`,
     pre: PY_ARM,
@@ -57,32 +60,33 @@ export const LESSONS = [
     solution: `def fk(theta1, theta2):\n    x = L1 * math.cos(theta1) + L2 * math.cos(theta1 + theta2)\n    y = L1 * math.sin(theta1) + L2 * math.sin(theta1 + theta2)\n    return x, y\n\nprint(fk(0, 0))\n`,
     hint: 'The second link’s angle is <code>theta1 + theta2</code>. y uses <code>math.sin</code> where x uses <code>math.cos</code>.',
     tests: [
-      ['arm straight out: fk(0, 0) = (0.44, 0)', `x, y = fk(0, 0)\nassert abs(x - 0.44) < 1e-6 and abs(y) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
-      ['arm straight up: fk(π/2, 0) = (0, 0.44)', `x, y = fk(math.pi/2, 0)\nassert abs(x) < 1e-6 and abs(y - 0.44) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
-      ['elbow bent 90°: fk(0, π/2) = (0.22, 0.22)', `x, y = fk(0, math.pi/2)\nassert abs(x - 0.22) < 1e-6 and abs(y - 0.22) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
+      ['arm straight out: fk(0, 0) = (0.251, 0)', `x, y = fk(0, 0)\nassert abs(x - 0.251) < 1e-6 and abs(y) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
+      ['arm straight up: fk(π/2, 0) = (0, 0.251)', `x, y = fk(math.pi/2, 0)\nassert abs(x) < 1e-6 and abs(y - 0.251) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
+      ['elbow bent 90°: fk(0, π/2) = (0.116, 0.135)', `x, y = fk(0, math.pi/2)\nassert abs(x - 0.116) < 1e-6 and abs(y - 0.135) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
     ],
   },
   {
-    id: 'ik', unit: 1, course: 'basics', title: 'Inverse kinematics', viz: 'ik',
+    id: 'ik', unit: 1, course: 'basics', title: 'Inverse kinematics', viz: 'ik', explain: 'armik',
     text: `<p><b>Inverse kinematics</b> is the question you actually care about: <i>I want the hand at (x, y). What joint angles get it there?</i></p>
 <p>For two links there is a closed-form answer from the law of cosines:</p>
 <p class="mono">cos(θ₂) = (x² + y² − L1² − L2²) / (2·L1·L2)<br>θ₁ = atan2(y, x) − atan2(L2·sin(θ₂), L1 + L2·cos(θ₂))</p>
-<p>This is exactly how the lab’s arm turns your keyboard’s “move left” into joint commands.</p>
+<p>Drag the target in the widget first: notice the two solutions (elbow down and elbow up, the ± of the arccos) and the ring of reachable points. This is exactly how the lab’s arm turns your keyboard’s “move left” into joint commands.</p>
 <p><b>Your task</b>: fill in the two missing lines. Then <b>click anywhere in the picture</b>: the arm uses <i>your</i> function to reach for the click.</p>`,
     pre: PY_ARM,
-    starter: `def ik(x, y):\n    c2 = ...                      # cos(theta2), from the formula\n    theta2 = math.acos(c2)\n    theta1 = math.atan2(y, x) - ...\n    return theta1, theta2\n\nprint(ik(0.3, 0.2))\n`,
-    solution: `def ik(x, y):\n    c2 = (x*x + y*y - L1**2 - L2**2) / (2 * L1 * L2)\n    theta2 = math.acos(c2)\n    theta1 = math.atan2(y, x) - math.atan2(L2 * math.sin(theta2), L1 + L2 * math.cos(theta2))\n    return theta1, theta2\n\nprint(ik(0.3, 0.2))\n`,
+    starter: `def ik(x, y):\n    c2 = ...                      # cos(theta2), from the formula\n    theta2 = math.acos(c2)\n    theta1 = math.atan2(y, x) - ...\n    return theta1, theta2\n\nprint(ik(0.15, 0.1))\n`,
+    solution: `def ik(x, y):\n    c2 = (x*x + y*y - L1**2 - L2**2) / (2 * L1 * L2)\n    theta2 = math.acos(c2)\n    theta1 = math.atan2(y, x) - math.atan2(L2 * math.sin(theta2), L1 + L2 * math.cos(theta2))\n    return theta1, theta2\n\nprint(ik(0.15, 0.1))\n`,
     hint: 'Squares in Python: <code>x*x</code> or <code>L1**2</code>. The second term of θ₁ is <code>math.atan2(L2 * math.sin(theta2), L1 + L2 * math.cos(theta2))</code>.',
     tests: [
-      ['ik returns two angles', `t = ik(0.3, 0.2)\nassert len(t) == 2`],
-      ['plugging ik into forward kinematics lands on the target', `def _fk(a, b):\n    return L1*math.cos(a)+L2*math.cos(a+b), L1*math.sin(a)+L2*math.sin(a+b)\nfor (tx, ty) in [(0.3, 0.2), (0.1, 0.3), (-0.2, 0.25), (0.35, -0.1)]:\n    x, y = _fk(*ik(tx, ty))\n    assert abs(x-tx) < 1e-6 and abs(y-ty) < 1e-6, "asked for (%.2f, %.2f) but the arm went to (%.2f, %.2f)" % (tx, ty, x, y)`],
+      ['ik returns two angles', `t = ik(0.15, 0.1)\nassert len(t) == 2`],
+      ['plugging ik into forward kinematics lands on the target', `def _fk(a, b):\n    return L1*math.cos(a)+L2*math.cos(a+b), L1*math.sin(a)+L2*math.sin(a+b)\nfor (tx, ty) in [(0.15, 0.1), (0.05, 0.18), (-0.1, 0.15), (0.2, -0.05)]:\n    x, y = _fk(*ik(tx, ty))\n    assert abs(x-tx) < 1e-6 and abs(y-ty) < 1e-6, "asked for (%.2f, %.2f) but the arm went to (%.2f, %.2f)" % (tx, ty, x, y)`],
     ],
   },
+  ...CONTROL_INTRO,
   {
-    id: 'pcontrol', unit: 1, course: 'basics', title: 'A control loop', viz: 'pcontrol',
+    id: 'pcontrol', unit: 1, course: 'basics', title: 'P control: one joint', viz: 'pcontrol', explain: 'presp',
     text: `<p>Knowing the angle you want is not the same as being there. A <b>controller</b> runs many times per second: measure where the joint is, compare with where it should be, push accordingly.</p>
 <p>The simplest one is <b>proportional (P) control</b>: push in proportion to the error.</p><p class="mono">command = kp × (target − current)</p>
-<p>Too small a gain <code>kp</code> and the joint crawls. Too big and it overshoots and oscillates (with our 20 Hz loop, anything above 20 gets ugly; above 40 it explodes).</p>
+<p>Too small a gain <code>kp</code> and the joint crawls. Too big and it overshoots and oscillates. Drag the sliders above: what matters is kp × (loop period). With our 20 Hz loop, anything above 20 overshoots and above 40 it explodes; run the loop faster and you can afford a higher gain.</p>
 <p><b>Your task</b>: write <code>p_control</code>, then pick a gain <code>KP</code> that gets within 1% of the target in under one second without overshooting. The plot shows the response.</p>`,
     starter: `def p_control(q, q_target, kp):\n    return ...\n\nKP = 1.0   # tune me\n`,
     solution: `def p_control(q, q_target, kp):\n    return kp * (q_target - q)\n\nKP = 8.0\n`,
@@ -93,6 +97,7 @@ export const LESSONS = [
       ['…and never overshoots', `q, dt, peak = 0.0, 0.05, 0.0\nfor _ in range(40):\n    q += p_control(q, 1.0, KP) * dt\n    peak = max(peak, q)\nassert peak <= 1.0 + 1e-9, "it overshot to %.2f. Lower KP." % peak`],
     ],
   },
+  ...CONTROL_MORE,
   {
     id: 'mjcf', unit: 2, course: 'sim', title: 'Build a world in MuJoCo', viz: 'mjcf', lang: 'xml',
     text: `<p><b>MuJoCo</b> is the physics engine behind a huge share of robot learning research. You describe a world in an XML format called <b>MJCF</b>; MuJoCo simulates it.</p>

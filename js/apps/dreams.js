@@ -1,16 +1,17 @@
-// Dream Lab: generate synthetic demos ("neural trajectories") with a video world model, DreamGen-style.
+// World Models lab: generate synthetic demos with a video world model (+ inverse dynamics) or a world action model (WAM).
 import { h, fill, $, state, episodes, save, bus, toast, newId } from '../util.js';
 import { Sim, loadMujoco, rng, sampleLayout, ROBOTS, TASKS, CONTROL_DT } from '../sim/sim.js';
-import { WORLD_MODELS, MIN_TUNE_DEMOS, parsePrompt, dream } from '../sim/dreams.js';
+import { WORLD_MODELS, WM_ALIASES, MIN_TUNE_DEMOS, parsePrompt, dream } from '../sim/dreams.js';
 import { Viewer } from '../sim/viewer.js';
 
 const PRESETS = ['put the red cube in the bin', 'put the blue cube in the bin', 'stack the red cube on the blue cube', 'wave hello to the camera'];
 let pending = []; // generated but not yet reviewed (kept in memory only)
 
 export default {
-  id: 'dreams', icon: '🌙', title: 'Dream Lab',
+  id: 'dreams', icon: '🌐', title: 'World Models',
   mount(el) {
-    const d = state.dream ||= { robot: 'sprout', wm: 'cosmos_zero', tuned: {}, n: 4, prompt: PRESETS[0] };
+    const d = state.dream ||= { robot: 'sprout', wm: 'video_zero', tuned: {}, n: 4, prompt: PRESETS[0] };
+    if (!WORLD_MODELS[d.wm]) d.wm = WM_ALIASES[d.wm] || 'video_zero';
     let mj, sim, viewer, alive = true, raf, snaps = [], cur = null, frame = 0, last = 0, acc = 0, busy = false;
 
     const view = h('.view3d', {}, h('.hud', {}, h('span.chip#w-status', {}, 'loading physics…')), h('.banner#w-banner', { hidden: true }));
@@ -18,8 +19,8 @@ export default {
     const wmBox = h('#w-wm'), dreamList = h('#w-list.col', { style: 'gap:8px' });
     const promptIn = h('input#w-prompt', { type: 'text', value: d.prompt, oninput: (e) => { d.prompt = e.target.value; save(); hint(); } });
     const hintEl = h('.dim', { style: 'font-size:12px;margin-top:3px' });
-    const goBtn = h('button#w-go', { onclick: generate }, 'Dream');
-    const commitBtn = h('button.ok#w-commit', { onclick: commit }, 'Add kept dreams to dataset');
+    const goBtn = h('button#w-go', { onclick: generate }, 'Generate');
+    const commitBtn = h('button.ok#w-commit', { onclick: commit }, 'Add kept rollouts to dataset');
 
     const tunedKey = () => `${d.robot}:${d.wm}`;
     const realDemos = () => episodes.filter((e) => e.robot === d.robot && e.source !== 'dream' && e.label === 'keep').length;
@@ -56,9 +57,9 @@ export default {
             x.revealed ? h('span.chip', { class: x.kind === 'good' ? 'good' : 'bad' }, `truth: ${x.kind}`) : null),
           h('button.small' + (x.label === 'keep' ? '.ok' : '.ghost'), { onclick: () => { x.label = 'keep'; renderList(); } }, 'Keep'),
           h('button.small' + (x.label === 'discard' ? '.danger' : '.ghost'), { onclick: () => { x.label = 'discard'; renderList(); } }, 'Drop'))))
-        : [h('p.dim', {}, 'No dreams yet. Snapshot a scene, write a prompt, press Dream.')]);
+        : [h('p.dim', {}, 'Nothing generated yet. Snapshot a scene, write a prompt, press Generate.')]);
       commitBtn.disabled = !pending.length || reviewed < pending.length;
-      commitBtn.textContent = pending.length ? `Add kept dreams to dataset (${reviewed}/${pending.length} reviewed)` : 'Add kept dreams to dataset';
+      commitBtn.textContent = pending.length ? `Add kept rollouts to dataset (${reviewed}/${pending.length} reviewed)` : 'Add kept rollouts to dataset';
     }
     function select(x) {
       cur = x; frame = 0;
@@ -81,16 +82,16 @@ export default {
       const wm = WORLD_MODELS[d.wm]; busy = true; renderWM();
       const rand = rng(Date.now() % 1e9), simD = new Sim(mj, d.robot), made = [];
       for (const [si, s] of snaps.entries()) for (let i = 0; i < d.n; i++) {
-        $('#w-status').textContent = `dreaming ${made.length + 1}/${snaps.length * d.n}…`;
+        $('#w-status').textContent = `generating ${made.length + 1}/${snaps.length * d.n}…`;
         await new Promise((r) => setTimeout(r, 0));
         const ep = dream(simD, s.layout, d.prompt, wm, rand);
-        made.push({ ...ep, id: newId('dream'), source: 'dream', robot: d.robot, snap: s.img, label: null, wm: wm.id });
+        made.push({ ...ep, id: newId('gen'), source: 'dream', robot: d.robot, snap: s.img, label: null, wm: wm.id });
       }
       simD.dispose();
       const cost = Math.round(made.length * wm.costPer * 10) / 10;
       state.gpuHours = Math.round((state.gpuHours + cost) * 10) / 10; state.seen.dreamed = true; save();
       pending.push(...made); busy = false;
-      $('#w-status').textContent = `${made.length} dreams generated · ${cost} GPU-h`;
+      $('#w-status').textContent = `${made.length} rollouts generated · ${cost} GPU-h`;
       renderWM(); select(made[0]);
     }
     function commit() {
@@ -101,10 +102,10 @@ export default {
         else if (x.kind === 'good') goodOut++;
       }
       save(true); state.seen.dreamsCommitted = (state.seen.dreamsCommitted || 0) + added; save();
-      fill($('#modal'), h('.box', {}, h('h2', {}, `${added} neural trajectories added`),
-        h('p', {}, badIn ? `${badIn} of them ${badIn === 1 ? 'was' : 'were'} broken (off-task or a physics glitch) and ${badIn === 1 ? 'is' : 'are'} now in your training data. Broken dreams hurt the policy like bad teleop does: find them in Dataset (source “dream”) and discard them.` : 'Nothing broken slipped through. Nice review.'),
-        goodOut ? h('p.dim', {}, `You dropped ${goodOut} good dream(s). That is cheap to fix: dream again.`) : null,
-        h('p.dim', {}, 'Dreams show up in Dataset with source “dream”. In Train they count, but less than real demos.'),
+      fill($('#modal'), h('.box', {}, h('h2', {}, `${added} generated rollouts added`),
+        h('p', {}, badIn ? `${badIn} of them ${badIn === 1 ? 'was' : 'were'} broken (off-task or a physics glitch) and ${badIn === 1 ? 'is' : 'are'} now in your training data. Broken rollouts hurt the policy like bad teleop does: find them in Dataset (source “generated”) and discard them.` : 'Nothing broken slipped through. Nice review.'),
+        goodOut ? h('p.dim', {}, `You dropped ${goodOut} good rollout(s). That is cheap to fix: generate again.`) : null,
+        h('p.dim', {}, 'Generated rollouts show up in Dataset as “generated”. In Train they count, but less than real demos.'),
         h('button', { onclick: () => { $('#modal').hidden = true; pending = []; cur = null; renderList(); live(); } }, 'Close')));
       $('#modal').hidden = false;
     }
@@ -130,7 +131,7 @@ export default {
         h('label', {}, 'Dreams per snapshot', h('select', { onchange: (e) => { d.n = +e.target.value; save(); } }, [2, 4, 8].map((n) => h('option', { value: n, selected: n === d.n }, n)))),
         goBtn),
       h('.mainc', {}, view, h('.pad', {}, h('.row', { style: 'margin-bottom:8px' }, h('h3', { style: 'margin:0' }, '4 · Review'), h('span.spacer'), h('button.small.ghost', { onclick: live }, 'Back to live camera'), commitBtn),
-        h('p.dim', { style: 'font-size:12.5px' }, 'Each dream is a generated video plus pseudo-actions inferred by an inverse dynamics model. Keep the ones that follow the prompt and obey physics.'),
+        h('p.dim', { style: 'font-size:12.5px' }, 'Each rollout is a generated video plus pseudo-actions (from an inverse dynamics model, or predicted jointly by a WAM). Keep the ones that follow the prompt and obey physics.'),
         dreamList))));
     hint(); renderSnaps(); renderList();
     const off = bus.on('change', () => { if (!busy) renderWM(); });

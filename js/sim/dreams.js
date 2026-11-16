@@ -1,4 +1,4 @@
-// "Neural trajectories": synthetic demos from a video world model, DreamGen-style (Jang et al., 2025).
+// Generated trajectories: synthetic demos from a world model (video model + inverse dynamics, or a world action model).
 //
 // HONESTY NOTE: no video model runs in your browser. A "dream" is a MuJoCo rollout of the scripted
 // operator, then corrupted the way real generated videos go wrong: they ignore the instruction,
@@ -8,20 +8,23 @@ import { Sim, rng, sampleLayout, CONTROL_DT } from './sim.js';
 import { TASKS, GEOM } from './scene.js';
 import { Rollout, finishEpisode, DEMO_KINDS } from './operator.js';
 
+// Three generic families. Examples of each are named in the Academy lesson; none of them runs here.
 export const WORLD_MODELS = {
-  cosmos_zero: {
-    id: 'cosmos_zero', name: 'Cosmos-Predict 2.5 (zero-shot)', lora: false, follow: 0.45, physics: 0.55, costPer: 0.08,
-    note: 'Open NVIDIA video world model, never shown your robot. Knows physics in general, not your arm.',
+  video_zero: {
+    id: 'video_zero', name: 'Video world model, zero-shot (+ inverse dynamics)', lora: false, follow: 0.45, physics: 0.55, costPer: 0.08, idm: 0.2,
+    note: 'An open image-to-video model that has never seen your robot. It knows physics in general, not your arm. An inverse dynamics model (IDM) guesses the actions from the frames.',
   },
-  cosmos_lora: {
-    id: 'cosmos_lora', name: 'Cosmos-Predict 2.5 + LoRA on your teleop', lora: true, follow: 0.88, physics: 0.86, costPer: 0.08, tuneCost: 2.5,
-    note: 'Same model, fine-tuned (LoRA) on your robot’s teleop videos so it learns how this arm moves. Step 1 of DreamGen.',
+  video_lora: {
+    id: 'video_lora', name: 'Video world model + LoRA on your teleop (+ inverse dynamics)', lora: true, follow: 0.88, physics: 0.86, costPer: 0.08, tuneCost: 2.5, idm: 0.08,
+    note: 'The same video model, fine-tuned (LoRA) on your robot’s teleop videos so it learns how this arm looks and moves. Actions still come from a separate IDM.',
   },
-  wan_lora: {
-    id: 'wan_lora', name: 'Wan 2.2 + LoRA on your teleop', lora: true, follow: 0.82, physics: 0.8, costPer: 0.06, tuneCost: 2,
-    note: 'Open image-to-video model (the DreamGen paper used Wan 2.1), fine-tuned the same way. A little cheaper, a little sloppier.',
+  wam: {
+    id: 'wam', name: 'World action model (WAM), fine-tuned: frames + actions together', lora: true, follow: 0.9, physics: 0.88, costPer: 0.12, tuneCost: 3.5, idm: 0.03,
+    note: 'One model predicts the future frames and the robot actions jointly, so actions agree with the video by construction (no separate IDM). Costs more to fine-tune and to sample.',
   },
 };
+// Older saves used model ids from before the rename.
+export const WM_ALIASES = { cosmos_zero: 'video_zero', cosmos_lora: 'video_lora', wan_lora: 'video_lora' };
 export const MIN_TUNE_DEMOS = 8;
 
 // Very small "language understanding": map a prompt to one of the lab's tasks.
@@ -47,8 +50,8 @@ export function dream(sim, layout, prompt, wm, rand) {
   const ep = r.result();
   // physics violations
   if (kind === 'good' && rand() > wm.physics) { kind = 'glitch'; corrupt(ep.frames, task, rand); }
-  // IDM pseudo-actions: what an inverse dynamics model infers from pixels, never perfect
-  const idm = wm.lora ? 0.08 : 0.2;
+  // Pseudo-actions: inferred from pixels by an IDM (video models) or predicted jointly (WAM); never perfect
+  const idm = wm.idm;
   ep.actions = ep.actions.map((a) => a.map((v, i) => (i < 3 ? Math.round((v + rand.gauss() * idm) * 1e3) / 1e3 : v)));
   // the task we *asked for* is what the clip gets labelled with
   ep.task = task || 'red_bin';

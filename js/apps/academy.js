@@ -6,6 +6,8 @@ import { Rollout, DEMO_KINDS } from '../sim/operator.js';
 import { trueSubtasks } from '../annotate.js';
 import { NEW_LABS } from './labs2.js';
 import { LABS3 } from './labs3.js';
+import { LABS4 } from './labs4.js';
+import { EXPLAIN } from '../course/explain.js';
 import { Viewer } from '../sim/viewer.js';
 
 let pyPromise = null;
@@ -26,10 +28,10 @@ const LAYOUT = { red: [0.25, 0.10, 0], blue: [0.33, 0.2, 0] };
 const LABS = {
   fk({ panel, ns }) {
     const [, g] = canvas(panel); const fk = ns.get('fk'); let t = 0, raf, bad = false;
-    const S = 300, ox = 170, oy = 250, L = 0.22;
+    const L1 = Number(ns.get('L1')), L2 = Number(ns.get('L2')), S = 130 / (L1 + L2), ox = 170, oy = 250;
     const draw = () => {
       t += 0.02; const a = 0.9 + 0.6 * Math.sin(t), b = 0.9 + 0.8 * Math.cos(1.3 * t);
-      const ex = L * Math.cos(a), ey = L * Math.sin(a), hx = ex + L * Math.cos(a + b), hy = ey + L * Math.sin(a + b);
+      const ex = L1 * Math.cos(a), ey = L1 * Math.sin(a), hx = ex + L2 * Math.cos(a + b), hy = ey + L2 * Math.sin(a + b);
       g.clearRect(0, 0, 340, 300); g.lineCap = 'round';
       g.strokeStyle = '#59647a'; g.lineWidth = 10; g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + ex * S, oy - ey * S); g.lineTo(ox + hx * S, oy - hy * S); g.stroke();
       g.fillStyle = '#8d97a8'; g.fillRect(ox - 22, oy, 44, 8);
@@ -42,16 +44,16 @@ const LABS = {
   },
   ik({ panel, ns }) {
     const [c, g] = canvas(panel); const ik = ns.get('ik');
-    const S = 300, ox = 170, oy = 190, L = 0.22; let target = [0.25, 0.2];
+    const L1 = Number(ns.get('L1')), L2 = Number(ns.get('L2')), S = 130 / (L1 + L2), ox = 170, oy = 190; let target = [0.15, 0.1];
     const draw = () => {
       g.clearRect(0, 0, 340, 300); g.lineCap = 'round';
-      g.strokeStyle = '#232a36'; g.lineWidth = 1; g.beginPath(); g.arc(ox, oy, 0.44 * S, 0, 7); g.stroke();
+      g.strokeStyle = '#232a36'; g.lineWidth = 1; g.beginPath(); g.arc(ox, oy, (L1 + L2) * S, 0, 7); g.stroke();
       g.strokeStyle = '#ff9d3c'; g.lineWidth = 2; const [tx, ty] = [ox + target[0] * S, oy - target[1] * S];
       g.beginPath(); g.moveTo(tx - 7, ty); g.lineTo(tx + 7, ty); g.moveTo(tx, ty - 7); g.lineTo(tx, ty + 7); g.stroke();
       g.font = '12px monospace'; g.fillStyle = '#8d97a8';
       try {
         const [a, b] = ik(target[0], target[1]).toJs();
-        const ex = L * Math.cos(a), ey = L * Math.sin(a), hx = ex + L * Math.cos(a + b), hy = ey + L * Math.sin(a + b);
+        const ex = L1 * Math.cos(a), ey = L1 * Math.sin(a), hx = ex + L2 * Math.cos(a + b), hy = ey + L2 * Math.sin(a + b);
         g.strokeStyle = '#59647a'; g.lineWidth = 10; g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + ex * S, oy - ey * S); g.lineTo(ox + hx * S, oy - hy * S); g.stroke();
         g.fillText(`click to move the target · θ₁=${a.toFixed(2)} θ₂=${b.toFixed(2)}`, 10, 18);
       } catch { g.fillStyle = '#ff6b6b'; g.fillText('out of reach (or ik() raised an error)', 10, 18); }
@@ -157,6 +159,7 @@ const LABS = {
   },
   ...NEW_LABS,
   ...LABS3,
+  ...LABS4,
 };
 
 
@@ -179,6 +182,7 @@ export default {
     const solBtn = h('button.ghost', { onclick: async () => { if (await ask('Show the reference solution? Try the hint first.', 'Show it')) { editor.value = lesson.solution; state.course.code[lesson.id] = lesson.solution; save(); } } }, 'Solution');
     const codeRow = h('.row', {}, runBtn, nextBtn, hintBtn, resetBtn, solBtn);
     const quizBox = h('#quiz.col', { style: 'gap:10px' });
+    const explainBox = h('#explain'); let explainCleanup = null;
     const sidePanel = h('.side.right', { style: 'width:360px' }, h('h3', {}, 'Lab bench'), panel);
     editor.addEventListener('keydown', (e) => {
       if (e.key === 'Tab') { e.preventDefault(); const s = editor.selectionStart; editor.setRangeText('    ', s, editor.selectionEnd, 'end'); }
@@ -206,6 +210,8 @@ export default {
       crumb.textContent = `${c.title} · lesson ${ORDERED.filter((x) => x.course === l.course).indexOf(l) + 1}`;
       title.textContent = l.title;
       text.innerHTML = l.text;
+      explainCleanup?.(); explainCleanup = null; fill(explainBox);
+      if (l.explain && EXPLAIN[l.explain]) { try { explainCleanup = EXPLAIN[l.explain](explainBox, l) || null; } catch (e) { explainBox.append(h('p.bad', {}, `explainer failed: ${e.message}`)); } }
       text.querySelectorAll('a').forEach((a) => a.addEventListener('click', (e) => e.stopPropagation()));
       const k = kindOf(l);
       editor.hidden = codeRow.hidden = term.hidden = !(k === 'py' || k === 'xml');
@@ -271,10 +277,10 @@ export default {
     }
 
     el.append(h('.split', {}, nav,
-      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, crumb, title, text, quizBox, editor, codeRow, results, term),
+      h('.mainc.pad', { style: 'gap:10px;min-width:300px' }, crumb, title, text, explainBox, quizBox, editor, codeRow, results, term),
       sidePanel));
     open(lesson);
     getPy().catch(() => {}); // warm up in the background
-    return () => { alive = false; labCleanup?.(); };
+    return () => { alive = false; labCleanup?.(); explainCleanup?.(); };
   },
 };
