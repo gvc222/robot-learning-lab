@@ -18,7 +18,7 @@ export const COURSES = [
 ];
 const UNIT_COURSE = { 1: 'basics', 2: 'sim', 3: 'rl' };
 
-const PY_ARM = 'import math\nL1 = 0.116   # SO-101 upper arm (m), measured from its MuJoCo model\nL2 = 0.135   # SO-101 forearm\n';
+const PY_ARM = 'import math\nL1 = 0.116   # SO-101 upper arm (m), measured from its MuJoCo model\nL2 = 0.135   # SO-101 forearm\nLINKS = [0.116, 0.135, 0.0637]   # all three planar links of the SO-101: upper arm, forearm, wrist→gripper\n';
 
 export const LESSONS = [
   {
@@ -26,7 +26,7 @@ export const LESSONS = [
     text: `<p>A robot arm is a chain of <b>links</b> connected by <b>joints</b>. If you know the angle of every joint, you know exactly where the whole arm is. That list of numbers is called the <b>joint state</b> (or <i>configuration</i>).</p>
 <p>Above is a real, widely used arm: the open-source <b>SO-101</b> from LeRobot, loaded from its MuJoCo model. Drag the sliders: each one is a joint, and the list underneath is the robot’s joint state, in <b>radians</b>. It has 6 numbers: shoulder pan, shoulder lift, elbow flex, wrist flex, wrist roll and the gripper. Switch to <b>YAM</b> (a larger research arm) to compare, or load your own robot’s URDF or MJCF (select the file together with its mesh files).</p>
 <p>Why not a made-up “dummy” arm? Simple toy arms are handy for deriving formulas (we use a two-link one in the next lessons), but the numbers you learn here should match a robot you can actually buy, build and download data for. So the lessons use the SO-101’s real link lengths.</p>
-<p><b>Your task</b></p><ol><li>Make a list called <code>joint_angles</code> with one number per SO-101 joint (6), for example copied from the widget.</li><li>Set <code>gripper_open</code> to <code>True</code>.</li><li>Set <code>num_joints</code> using <code>len(...)</code>, not by typing 4.</li></ol>`,
+<p><b>Your task</b></p><ol><li>Make a list called <code>joint_angles</code> with one number per SO-101 joint (6), for example copied from the widget.</li><li>Set <code>gripper_open</code> to <code>True</code>.</li><li>Set <code>num_joints</code> using <code>len(...)</code>, not by typing 6.</li></ol>`,
     starter: `# The SO-101's state: one angle per joint, in radians\n# shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper\njoint_angles = [0.0, -0.5, ...]\n\ngripper_open = ...\n\nnum_joints = ...\n\nprint("joints:", joint_angles)\n`,
     solution: `joint_angles = [0.0, -0.5, 0.8, 0.3, 0.0, 0.2]\ngripper_open = True\nnum_joints = len(joint_angles)\nprint("joints:", joint_angles)\n`,
     hint: 'Replace every <code>...</code>. A list looks like <code>[0.0, 0.5, 1.2, 1.4]</code>.',
@@ -53,24 +53,28 @@ export const LESSONS = [
   {
     id: 'fk', unit: 1, course: 'basics', title: 'Forward kinematics', viz: 'fk', explain: 'armfk',
     text: `<p><b>Forward kinematics</b> answers: <i>given the joint angles, where is the hand?</i></p>
-<p>Look at the SO-101 from the side: shoulder lift, elbow flex and wrist flex all bend in the same vertical plane, so in that plane it is a <b>planar arm</b>. In the widget, move θ₁ and θ₂ and watch the formula update; switch to YAM, or build a custom arm and add links (the sum just gets more terms).</p>
-<p>Take the first two links, lengths <code>L1</code> and <code>L2</code> (the SO-101’s are 0.116 m and 0.135 m). The first link points at angle θ₁. The second link is attached to its tip and bends a further θ₂, so it points at θ₁ + θ₂. Add the two links tip to tail:</p>
+<p>Look at the SO-101 from the side: shoulder lift, elbow flex and wrist flex all bend in the same vertical plane, so in that plane it is a <b>planar arm with 3 links</b> (upper arm, forearm, wrist to gripper). In the widget, move θ₁, θ₂, θ₃ and watch the formula update; switch to YAM, or build a custom arm and add links.</p>
+<p>Start with two links of lengths <code>L1</code> and <code>L2</code>. The first points at angle θ₁. The second is attached to its tip and bends a further θ₂, so it points at θ₁ + θ₂. Add them tip to tail:</p>
 <p class="mono">x = L1·cos(θ₁) + L2·cos(θ₁ + θ₂)<br>y = L1·sin(θ₁) + L2·sin(θ₁ + θ₂)</p>
-<p><b>Your task</b>: finish <code>fk</code>. <code>L1</code>, <code>L2</code> and <code>math</code> are already defined. The picture on the right draws the true arm in grey and <span style="color:var(--accent)">your answer as an orange dot</span>: it should ride on the fingertip.</p>`,
+<p>A third link just adds a third term, pointing at θ₁ + θ₂ + θ₃. Writing a new line for each link doesn’t scale, so the general recipe is a <b>loop</b>: keep a running <code>angle</code> (the sum of the θ’s so far) and a running tip position, and for each link add its angle, then step along it.</p>
+<p class="mono">angle += θᵢ<br>x += Lᵢ·cos(angle)<br>y += Lᵢ·sin(angle)</p>
+<p><b>Your task</b>: finish <code>fk(thetas)</code> so it works for <i>any</i> number of links. <code>LINKS</code> (the SO-101’s three lengths) and <code>math</code> are already defined. The picture on the right draws the true arm in grey and <span style="color:var(--accent)">your answer as an orange dot</span>: it should ride on the tip of the last link.</p>`,
     pre: PY_ARM,
-    starter: `def fk(theta1, theta2):\n    x = L1 * math.cos(theta1) + ...\n    y = ...\n    return x, y\n\nprint(fk(0, 0))\n`,
-    solution: `def fk(theta1, theta2):\n    x = L1 * math.cos(theta1) + L2 * math.cos(theta1 + theta2)\n    y = L1 * math.sin(theta1) + L2 * math.sin(theta1 + theta2)\n    return x, y\n\nprint(fk(0, 0))\n`,
-    hint: 'The second link’s angle is <code>theta1 + theta2</code>. y uses <code>math.sin</code> where x uses <code>math.cos</code>.',
+    starter: `def fk(thetas, links=LINKS):\n    x, y, angle = 0.0, 0.0, 0.0\n    for theta, length in zip(thetas, links):\n        angle += ...          # each joint adds to the direction\n        x += ...\n        y += ...\n    return x, y\n\nprint(fk([0, 0, 0]))\n`,
+    solution: `def fk(thetas, links=LINKS):\n    x, y, angle = 0.0, 0.0, 0.0\n    for theta, length in zip(thetas, links):\n        angle += theta\n        x += length * math.cos(angle)\n        y += length * math.sin(angle)\n    return x, y\n\nprint(fk([0, 0, 0]))\n`,
+    hint: 'Inside the loop: <code>angle += theta</code>, then <code>x += length * math.cos(angle)</code> and the same with <code>math.sin</code> for y. Don’t reset <code>angle</code> inside the loop.',
     tests: [
-      ['arm straight out: fk(0, 0) = (0.251, 0)', `x, y = fk(0, 0)\nassert abs(x - 0.251) < 1e-6 and abs(y) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
-      ['arm straight up: fk(π/2, 0) = (0, 0.251)', `x, y = fk(math.pi/2, 0)\nassert abs(x) < 1e-6 and abs(y - 0.251) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
-      ['elbow bent 90°: fk(0, π/2) = (0.116, 0.135)', `x, y = fk(0, math.pi/2)\nassert abs(x - 0.116) < 1e-6 and abs(y - 0.135) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
+      ['arm straight out: fk([0,0,0]) = (0.3147, 0)', `x, y = fk([0, 0, 0])\nassert abs(x - 0.3147) < 1e-6 and abs(y) < 1e-6, "got (%.4f, %.4f)" % (x, y)`],
+      ['arm straight up: fk([π/2,0,0]) = (0, 0.3147)', `x, y = fk([math.pi/2, 0, 0])\nassert abs(x) < 1e-6 and abs(y - 0.3147) < 1e-6, "got (%.4f, %.4f)" % (x, y)`],
+      ['elbow bent 90°: fk([0,π/2,0]) = (0.116, 0.1987)', `x, y = fk([0, math.pi/2, 0])\nassert abs(x - 0.116) < 1e-6 and abs(y - 0.1987) < 1e-6, "got (%.4f, %.4f)" % (x, y)`],
+      ['works for any links: three unit links bent 0, 90°, 90° end at (0, 1)', `x, y = fk([0, math.pi/2, math.pi/2], [1, 1, 1])\nassert abs(x) < 1e-6 and abs(y - 1) < 1e-6, "got (%.3f, %.3f). Is angle a running sum?" % (x, y)`],
+      ['and for two links too', `x, y = fk([0.5, -0.5], [1, 2])\nassert abs(x - (math.cos(0.5) + 2)) < 1e-6 and abs(y - math.sin(0.5)) < 1e-6, "got (%.3f, %.3f)" % (x, y)`],
     ],
   },
   {
     id: 'ik', unit: 1, course: 'basics', title: 'Inverse kinematics', viz: 'ik', explain: 'armik',
     text: `<p><b>Inverse kinematics</b> is the question you actually care about: <i>I want the hand at (x, y). What joint angles get it there?</i></p>
-<p>For two links there is a closed-form answer from the law of cosines:</p>
+<p>For two links there is a closed-form answer from the law of cosines. (With a third link, like the SO-101’s wrist, there are infinitely many answers, since the wrist can tilt freely. The usual trick is to choose the wrist angle yourself, move the target back by the last link, and solve the remaining two links as below.)</p>
 <p class="mono">cos(θ₂) = (x² + y² − L1² − L2²) / (2·L1·L2)<br>θ₁ = atan2(y, x) − atan2(L2·sin(θ₂), L1 + L2·cos(θ₂))</p>
 <p>Drag the target in the widget first: notice the two solutions (elbow down and elbow up, the ± of the arccos) and the ring of reachable points. This is exactly how the lab’s arm turns your keyboard’s “move left” into joint commands.</p>
 <p><b>Your task</b>: fill in the two missing lines. Then <b>click anywhere in the picture</b>: the arm uses <i>your</i> function to reach for the click.</p>`,

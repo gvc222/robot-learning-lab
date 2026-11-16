@@ -6,7 +6,7 @@ You don't read about robot learning here. You badge in to *Tabletop Robotics*, g
 
 Everything runs in the browser. No install, no account, no backend.
 
-> **Live site:** https://gvc222.github.io/robot-learning-lab/ (once GitHub Pages is on: Settings → Pages → Deploy from branch → `main` / root).
+> **Live site:** https://gvc222.github.io/robot-learning-lab/
 
 ## What you do
 
@@ -17,7 +17,7 @@ Everything runs in the browser. No install, no account, no backend.
 | ROB-2 | **Academy**: Robot basics & control | Starts on real robots, not a toy arm: the SO-101 (default) and I2RT YAM from MuJoCo Menagerie, or load your own URDF/MJCF, with a slider per joint. Radians, forward kinematics (θ₁, θ₂… drawn as angle arcs, real link lengths, add links), inverse kinematics (drag the target, see both elbow solutions), then a control track: what a control loop is, P, PD (damping ratio), PID and gravity feed-forward, joint-space PD + gravity compensation on a two-link arm in MuJoCo, and how real smart servos do it (LeRobot's SO-101 servo gains). Every lesson opens with an interactive explainer before the code, and control labs have gain sliders that rerun your controller. |
 | ROB-3 | **Teleop** | Drive a simulated arm with the keyboard (WASD + R/F + Space) and record demonstrations with a task language attached. |
 | ROB-4 | **Dataset** | Replay 24 episodes from the "night shift", read the metrics, keep or discard each one, get a QA report on what you missed and why it matters. |
-| ROB-5 | **Train** | Nine policy architectures modeled on what LeRobot ships (ACT, Diffusion Policy, VQ-BeT, SmolVLA, π0, π0-FAST, π0.5, GR00T N1.7, Fast-WAM). Hyper-parameters, loss curves, GPU-hours, out-of-memory errors, a diverging learning rate. |
+| ROB-5 | **Train** | Nine policy architectures: the families LeRobot ships (ACT, Diffusion Policy, VQ-BeT, SmolVLA, π0, π0-FAST, π0.5) plus GR00T N1.7 and Fast-WAM. Hyper-parameters, loss curves, GPU-hours, out-of-memory errors, a diverging learning rate. |
 | ROB-6 | **Eval** | One task language, several policies, same cube layouts. Change spread, visual shift, action chunk size and speed and watch who breaks. |
 | ROB-7 | **Academy**: Simulation and RL (optional) | MuJoCo XML, a scripted pick, sim-to-real with domain randomization, rewards, Q-learning, random-search RL on the MuJoCo arm, reward models, RL fine-tuning. |
 | ROB-8 | **Capstone** | No guide. A different robot, two task languages, one policy, and hard targets for success rate, time per trajectory, motion quality, offline error, onboard VRAM, GPU budget and operator budget. |
@@ -67,7 +67,7 @@ It matters to be honest about this in a teaching tool.
 - **Online evaluation and RL practice rollouts.** Every trial is a full physics rollout with success detected from the simulated state.
 - **The LeRobot export.** The zip and script produce a genuine LeRobotDataset.
 - **Week 3 physics.** The friction incline, the coffee shift (including every slip and regrasp), the delivery robot's wheel contacts and its lidar rays are all MuJoCo. The SO-101 and LEAP Hand are MuJoCo Menagerie models (meshes decimated to keep the page light).
-- **The leader-arm protocol.** Packets match Feetech's SCServo SDK byte for byte (unit-tested); a mock serial port exercises the full read loop in the e2e test. It has not been run against a physical arm from this repo's CI, so treat first contact as a test.
+- **The leader-arm protocol.** Packets match Feetech's SCServo SDK byte for byte (unit-tested); a mock serial port exercises the full read loop in the e2e test. It has not been tested against a physical arm, so treat first contact as a test.
 - **Hand tracking.** MediaPipe Hand Landmarker runs in your browser; the video never leaves the laptop. The model file downloads from Google's storage the first time.
 
 **Pretend**
@@ -98,6 +98,7 @@ Progress is saved in the browser's `localStorage`. "Reset the lab" on the Ticket
 index.html            page shell
 css/style.css         all styles
 js/main.js            LabOS shell: dock, window, chat, ticket watcher
+js/util.js            DOM helpers, saved state, progress export/import
 js/story.js           tickets, teammate messages, guide popup steps   ← edit the "job" here
 js/annotate.js        subtask segmentation + FLORA-style auto-labeler
 js/zip.js             tiny zip writer for the LeRobot export
@@ -130,10 +131,11 @@ No framework and no build step: plain ES modules.
 ## Tests
 
 ```sh
-npm test                  # physics + scripted controller in Node (no browser needed)
+npm test                  # physics + scripted controller in Node, and a check that every guide popup still points at a real element
 npm run test:calibration  # does the hidden "skill" number map to sensible success rates?
 node tests/dr.test.mjs    # does domain randomization help under shifted physics (real rollouts)?
 node tests/hand.test.mjs  # Feix classifier (incl. rotated/noisy hands) + Feetech packets vs the SDK
+node tests/starters.mjs   # every code lesson's untouched starter must fail its own tests
 npm run test:e2e          # whole flow in headless Chrome via Playwright: every lesson passes
                           # (code, quizzes, the motor bench), World Models, annotation, export,
                           # RL fine-tuning, eval statistics, and the capstone is achievable

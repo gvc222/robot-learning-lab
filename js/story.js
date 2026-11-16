@@ -23,7 +23,7 @@ export const TICKETS = [
     desc: 'Fine-tune a model on your cleaned dataset and read the loss curves.',
     done: () => state.policies.some((p) => !p.baseline && !p.error) },
   { id: 'ROB-6', title: 'Evaluate on the workbench', app: 'eval',
-    desc: 'Compare your policy against Maya’s baseline (trained on the uncleaned data): at least 10 trials each, same task language.',
+    desc: 'Compare your policy against Boinkie’s baseline (trained on the uncleaned data): at least 10 trials each, same task language.',
     done: () => state.evals.some((e) => e.rows.length >= 2 && e.trials >= 10) },
   { id: 'ROB-7', title: 'Academy: simulation & RL', app: 'academy', optional: true,
     desc: 'Optional deep-dive: MuJoCo XML, a scripted pick, sim-to-real, rewards, Q-learning, RL on a simulator and reward models.',
@@ -81,7 +81,7 @@ export const TICKETS = [
 export const activeTicket = () => TICKETS.find((t) => !t.optional && !t.done());
 
 export const PEOPLE = {
-  Maya: { av: '👩🏽‍🔬', role: 'Research lead' },
+  Boinkie: { av: '👩🏽‍🔬', role: 'Research lead' },
   Dev: { av: '🧑🏻‍💻', role: 'Teleop operations' },
   'cluster-bot': { av: '🤖', role: 'GPU cluster' },
   You: { av: '🙂', role: '' },
@@ -89,30 +89,30 @@ export const PEOPLE = {
 
 // Posted to chat when a ticket becomes the active one.
 export const BRIEFINGS = {
-  'ROB-2': [['Maya', 'Welcome aboard! Before you touch a robot, do the <b>Academy</b> basics. Ten short lessons on the SO-101: play with the widget, then write the code. If you already know kinematics and PID, there is a skip button in there.']],
-  'ROB-3': [['Maya', 'Nice. Now the fun part. Robots learn manipulation mostly by <b>imitation</b>: a human drives the arm, we record what they saw and did, and a model learns to copy it. Open the <b>Teleop</b> station and record 3 clean demos.'],
+  'ROB-2': [['Boinkie', 'Welcome aboard! Before you touch a robot, do the <b>Academy</b> basics. Ten short lessons on the SO-101: play with the widget, then write the code. If you already know kinematics and PID, there is a skip button in there.']],
+  'ROB-3': [['Boinkie', 'Nice. Now the fun part. Robots learn manipulation mostly by <b>imitation</b>: a human drives the arm, we record what they saw and did, and a model learns to copy it. Open the <b>Teleop</b> station and record 3 clean demos.'],
     ['Dev', 'Tip from the ops floor: smooth and boring beats fast and heroic. The model copies your hesitations too.']],
   'ROB-4': [['Dev', 'My operators recorded 24 more episodes on Sprout overnight. Honest warning: night shift is… variable. They are in <b>Dataset</b>.'],
-    ['Maya', 'Watch every episode. The numbers will point at suspects but only the video tells you what happened. Bad demos in → bad policy out.']],
-  'ROB-5': [['Maya', 'Dataset looks reviewed. Open <b>Train</b> and fine-tune <b>ACT</b> on “put the red cube in the bin”. Watch the train and validation loss.'],
+    ['Boinkie', 'Watch every episode. The numbers will point at suspects but only the video tells you what happened. Bad demos in → bad policy out.']],
+  'ROB-5': [['Boinkie', 'Dataset looks reviewed. Open <b>Train</b> and fine-tune <b>ACT</b> on “put the red cube in the bin”. Watch the train and validation loss.'],
     ['cluster-bot', 'Reminder: every job is billed in GPU-hours. Your usage is in the top bar.']],
-  'ROB-6': [['Maya', 'I trained a baseline, <code>maya/act-rawdata</code>, on the same demos <i>without</i> any cleaning. Put both on the <b>Eval</b> workbench with the same task language and see what your QA was worth. Then play with the parameters.']],
-  'ROB-9': [['Maya', 'Week 2. You have seen how expensive teleop is. Today: <b>world models</b>. Open <b>World Models</b>, snapshot the scene from the robot camera, and prompt a video model to imagine demos for you.'],
+  'ROB-6': [['Boinkie', 'I trained a baseline, <code>boinkie/act-rawdata</code>, on the same demos <i>without</i> any cleaning. Put both on the <b>Eval</b> workbench with the same task language and see what your QA was worth. Then play with the parameters.']],
+  'ROB-9': [['Boinkie', 'Week 2. You have seen how expensive teleop is. Today: <b>world models</b>. Open <b>World Models</b>, snapshot the scene from the robot camera, and prompt a video model to imagine demos for you.'],
     ['Dev', 'Fair warning: generated rollouts lie. Objects teleport, the model ignores the prompt. Review them like my night shift.']],
-  'ROB-10': [['Maya', 'One sentence per 8-second demo wastes information. Segment the episodes into subtasks and caption them (the <b>Dataset</b> auto-labeler is a FLORA-style VLM), then train a language model with <b>subtask captions</b>.']],
-  'ROB-11': [['Maya', 'Time to read. The <b>Academy</b> has a new course on data: subtasks, language, human video, and how many trials an eval really needs.']],
-  'ROB-12': [['Maya', 'Simulators flatter you. In <b>Eval</b>, crank friction and mass or flip the “real robot” switch. Then train one policy with <b>domain randomization</b> and compare.']],
+  'ROB-10': [['Boinkie', 'One sentence per 8-second demo wastes information. Segment the episodes into subtasks and caption them (the <b>Dataset</b> auto-labeler is a FLORA-style VLM), then train a language model with <b>subtask captions</b>.']],
+  'ROB-11': [['Boinkie', 'Time to read. The <b>Academy</b> has a new course on data: subtasks, language, human video, and how many trials an eval really needs.']],
+  'ROB-12': [['Boinkie', 'Simulators flatter you. In <b>Eval</b>, crank friction and mass or flip the “real robot” switch. Then train one policy with <b>domain randomization</b> and compare.']],
   'ROB-13': [['Dev', 'Our SO-101 kits arrived. Before you touch one, do the <b>Build an SO-101</b> course: motor IDs, calibration and both kinds of camera calibration.']],
-  'ROB-14': [['Maya', 'Reading group this week: the <b>CoRL 2026</b> award finalists, reviewed hands-on. SuperMimic took Best Paper. Bring opinions.']],
-  'ROB-15': [['Maya', 'Last one: <b>export</b> your kept demos as a LeRobotDataset so the real-robot team can train on them.']],
+  'ROB-14': [['Boinkie', 'Reading group this week: the <b>CoRL 2026</b> award finalists, reviewed hands-on. SuperMimic took Best Paper. Bring opinions.']],
+  'ROB-15': [['Boinkie', 'Last one: <b>export</b> your kept demos as a LeRobotDataset so the real-robot team can train on them.']],
   'ROB-16': [['Dev', 'Week 3: the cafe pilot. Sim cups don’t behave like ours. Do the <b>Digital twins</b> course and measure friction the old-fashioned way.']],
-  'ROB-17': [['Maya', 'The cafe wants a full shift, not a pick-and-place. Cups slip. Write the <b>coffee shift</b> so it recovers, and sort the logs before anyone trains on them.']],
-  'ROB-18': [['Maya', 'Second pilot: sidewalk delivery. Start with wheels and Kalman filters; mapping is inside the course, no separate SLAM course needed.']],
+  'ROB-17': [['Boinkie', 'The cafe wants a full shift, not a pick-and-place. Cups slip. Write the <b>coffee shift</b> so it recovers, and sort the logs before anyone trains on them.']],
+  'ROB-18': [['Boinkie', 'Second pilot: sidewalk delivery. Start with wheels and Kalman filters; mapping is inside the course, no separate SLAM course needed.']],
   'ROB-19': [['Dev', 'The dexterous-hand team wants grasp labels. Open <b>Hand Cam</b>, show it a few grasps, and log 3 different types.']],
-  'ROB-21': [['Maya', 'Week 4. Time to fill the gaps a robotics interview will poke at: point clouds, Jacobians, motion planning and ROS 2.']],
-  'ROB-22': [['Maya', 'You have been using my pretend training formula for weeks. Now train the real thing: a small network, real demos, real rollouts. Watch how many demos it takes.']],
+  'ROB-21': [['Boinkie', 'Week 4. Time to fill the gaps a robotics interview will poke at: point clouds, Jacobians, motion planning and ROS 2.']],
+  'ROB-22': [['Boinkie', 'You have been using my pretend training formula for weeks. Now train the real thing: a small network, real demos, real rollouts. Watch how many demos it takes.']],
   'ROB-20': [['Dev', 'If you have an SO-101 leader at home, the <b>Leader Arm</b> station reads it straight from Chrome. Totally optional.']],
-  'ROB-8': [['Maya', 'You are onboarded. We have a demo on Friday and it is yours. The brief is in <b>Capstone</b>. Different robot, two task languages, real constraints. Good luck!'],
+  'ROB-8': [['Boinkie', 'You are onboarded. We have a demo on Friday and it is yours. The brief is in <b>Capstone</b>. Different robot, two task languages, real constraints. Good luck!'],
     ['Dev', 'Ping me (the request button in Dataset) if you need operator hours. They are not free.']],
 };
 
@@ -121,7 +121,7 @@ export const BRIEFINGS = {
 export const GUIDE = {
   'ROB-2': [
     { app: 'academy', sel: '.lesson-text', text: 'Each lesson explains one idea. Read this first.' },
-    { app: 'academy', sel: 'textarea.code', text: 'This is your editor. Replace the <code>...</code> placeholders with real Python.' },
+    { app: 'academy', sel: '.code-editor', text: 'This is your editor. Replace the <code>...</code> placeholders with real Python.' },
     { app: 'academy', sel: '#run-tests', text: 'Run the tests. Green ticks mean you can move on; red crosses tell you what to fix. Stuck? Use <b>Hint</b>.' },
   ],
   'ROB-3': [
@@ -146,7 +146,7 @@ export const GUIDE = {
   ],
   'ROB-6': [
     { app: 'eval', sel: '#eval-task', text: 'Pick the task language to test. Language-conditioned models read it; ACT ignores it.' },
-    { app: 'eval', sel: '#eval-policies', text: 'Tick your policy <i>and</i> <code>maya/act-rawdata</code>. Same seeds, same cube positions, fair fight.' },
+    { app: 'eval', sel: '#eval-policies', text: 'Tick your policy <i>and</i> <code>boinkie/act-rawdata</code>. Same seeds, same cube positions, fair fight.' },
     { app: 'eval', sel: '#eval-params', text: 'Evaluation knobs. Leave them for the first run. Afterwards try a wider cube spread or a visual shift and see who breaks.' },
     { app: 'eval', sel: '#eval-run', text: 'Run it. Every trial is a real physics rollout. Offline numbers (loss) are cheap; online trials are the truth.' },
   ],

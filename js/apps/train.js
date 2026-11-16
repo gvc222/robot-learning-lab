@@ -12,7 +12,7 @@ export function ensureBaseline() {
   const stats = datasetStats(raw, 'sprout', ['red_bin']);
   if (stats.total < 2) return;
   const m = MODELS.act, res = trainPolicy('act', { steps: m.stepsNeeded, lr: m.lrBest, batch: 8, gpu: 'rtx4090' }, stats, ['red_bin'], 7);
-  state.policies.push({ ...res, curve: null, id: newId('pol'), name: 'maya/act-rawdata', robot: 'sprout', baseline: true, n: stats.total });
+  state.policies.push({ ...res, curve: null, id: newId('pol'), name: 'boinkie/act-rawdata', robot: 'sprout', baseline: true, n: stats.total });
 }
 
 export default {

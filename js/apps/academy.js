@@ -31,15 +31,17 @@ const LAYOUT = { red: [0.25, 0.10, 0], blue: [0.33, 0.2, 0] };
 const LABS = {
   fk({ panel, ns }) {
     const [, g] = canvas(panel); const fk = ns.get('fk'); let t = 0, raf, bad = false;
-    const L1 = Number(ns.get('L1')), L2 = Number(ns.get('L2')), S = 130 / (L1 + L2), ox = 170, oy = 250;
+    const LK = ns.get('LINKS').toJs(), S = 130 / LK.reduce((u, v) => u + v, 0), ox = 170, oy = 250;
     const draw = () => {
-      t += 0.02; const a = 0.9 + 0.6 * Math.sin(t), b = 0.9 + 0.8 * Math.cos(1.3 * t);
-      const ex = L1 * Math.cos(a), ey = L1 * Math.sin(a), hx = ex + L2 * Math.cos(a + b), hy = ey + L2 * Math.sin(a + b);
+      t += 0.02; const th = [0.9 + 0.6 * Math.sin(t), 0.9 + 0.8 * Math.cos(1.3 * t), -0.6 + 0.7 * Math.sin(0.7 * t)];
       g.clearRect(0, 0, 340, 300); g.lineCap = 'round';
-      g.strokeStyle = '#59647a'; g.lineWidth = 10; g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + ex * S, oy - ey * S); g.lineTo(ox + hx * S, oy - hy * S); g.stroke();
+      g.strokeStyle = '#59647a'; g.lineWidth = 10; g.beginPath(); g.moveTo(ox, oy);
+      let x = 0, y = 0, a = 0; LK.forEach((l, i) => { a += th[i]; x += l * Math.cos(a); y += l * Math.sin(a); g.lineTo(ox + x * S, oy - y * S); }); g.stroke();
       g.fillStyle = '#8d97a8'; g.fillRect(ox - 22, oy, 44, 8);
-      try { const [x, y] = fk(a, b).toJs(); g.fillStyle = '#ff9d3c'; g.beginPath(); g.arc(ox + x * S, oy - y * S, 7, 0, 7); g.fill(); g.fillStyle = '#8d97a8'; g.font = '12px monospace'; g.fillText(`θ₁=${a.toFixed(2)} θ₂=${b.toFixed(2)}  your fk → (${x.toFixed(2)}, ${y.toFixed(2)})`, 10, 18); }
-      catch { if (!bad) { bad = true; g.fillStyle = '#ff6b6b'; g.fillText('fk() raised an error', 10, 18); } }
+      try {
+        const [hx, hy] = fk(th).toJs(); g.fillStyle = '#ff9d3c'; g.beginPath(); g.arc(ox + hx * S, oy - hy * S, 7, 0, 7); g.fill();
+        g.fillStyle = '#8d97a8'; g.font = '12px monospace'; g.fillText(`θ=(${th.map((v) => v.toFixed(2)).join(', ')})`, 10, 18); g.fillText(`your fk → (${hx.toFixed(3)}, ${hy.toFixed(3)})`, 10, 34);
+      } catch { if (!bad) { bad = true; g.fillStyle = '#ff6b6b'; g.fillText('fk() raised an error', 10, 18); } }
       raf = requestAnimationFrame(draw);
     };
     draw();

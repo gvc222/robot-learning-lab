@@ -39,6 +39,9 @@ function load(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; }
 }
 export const state = Object.assign(blank(), load(KEY, {}));
+// The lead used to be called Maya: keep saved chats and the baseline policy name in step with the rename.
+for (const m of state.chat || []) if (m.from === 'Maya') m.from = 'Boinkie';
+for (const p of state.policies || []) if (p.name === 'maya/act-rawdata') p.name = 'boinkie/act-rawdata';
 export const episodes = load(EP_KEY, []);
 let saveTimer = null;
 export function save(withEpisodes = false) {

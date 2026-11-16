@@ -36,7 +36,7 @@ function render() {
   if (el.dataset.key !== key) {
     el.dataset.key = key;
     fill(el, 
-      h('.gh', {}, '👩🏽‍🔬 Maya', h('span.spacer'), h('span', {}, `${ticketId} · ${step + 1}/${steps().length}`),
+      h('.gh', {}, '👩🏽‍🔬 Boinkie', h('span.spacer'), h('span', {}, `${ticketId} · ${step + 1}/${steps().length}`),
         h('button', { title: 'Hide the guide (bring it back from the top bar)', onclick: () => { state.guideOff = true; save(); render(); } }, '✕')),
       h('.gb', { html: text }),
       h('.gf', {},

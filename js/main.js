@@ -67,7 +67,7 @@ function watch() {
       if (next && !state.seen['brief:' + next.id]) {
         state.seen['brief:' + next.id] = true;
         (BRIEFINGS[next.id] || []).forEach(([who, text], i) => setTimeout(() => post(who, text), 900 + 1400 * i));
-      } else if (!next && !state.seen.allDone) { state.seen.allDone = true; setTimeout(() => post('Maya', 'That is everything. You shipped it. 🎉 The lab stays open: try other robots, models and tasks.'), 900); }
+      } else if (!next && !state.seen.allDone) { state.seen.allDone = true; setTimeout(() => post('Boinkie', 'That is everything. You shipped it. 🎉 The lab stays open: try other robots, models and tasks.'), 900); }
     }
   }
 }
@@ -77,7 +77,7 @@ function welcome() {
   const go = () => {
     state.name = input.value.trim() || 'New hire';
     $('#modal').hidden = true; save();
-    post('Maya', `Hi ${state.name}! I am Maya, I lead robot learning here. Your onboarding is a list of tickets, top to bottom. I will leave you sticky notes (the orange popups) as you go.`);
+    post('Boinkie', `Hi ${state.name}! I am Boinkie, I lead robot learning here. Your onboarding is a list of tickets, top to bottom. I will leave you sticky notes (the orange popups) as you go.`);
   };
   input.addEventListener('keydown', (e) => e.key === 'Enter' && go());
   fill($('#modal'), h('.box', {},
