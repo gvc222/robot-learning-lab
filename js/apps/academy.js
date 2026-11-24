@@ -12,6 +12,7 @@ import { LABS6 } from './labs6.js';
 import { LABS7 } from './labs7.js';
 import { LABS9 } from './labs9.js';
 import { LABS10 } from './labs10.js';
+import { LABS11 } from './labs11.js';
 import { lessonDone, submitProject } from '../rewards.js';
 import { EXPLAIN } from '../course/explain.js';
 import { FEEDBACK_URL, REPO_URL } from '../config.js';
@@ -181,6 +182,7 @@ const LABS = {
   ...LABS7,
   ...LABS9,
   ...LABS10,
+  ...LABS11,
 };
 
 
